@@ -55,7 +55,7 @@ function fixedPointSystem(X0: number[], q: number, epsilon: number, maxIter: num
   logger.formula("Công thức: Xₖ₊₁ = Φ(Xₖ)");
   logger.text("Điều kiện dừng: ||Xₖ - Xₖ₋₁||∞ < ε₀");
   const fmtVec=(v:number[])=>`[${v.map(vi=>fmt(vi,tableDecimals)).join(", ")}]`;
-  let X_prev=[...X0]; const X_curr=[...X0]; let step=0, maxDiff=0;
+  let X_prev=[...X0], step=0, maxDiff=0; const X_curr=[...X0];
   const tableData: Record<string,unknown>[]=[{ k:0, X_k:fmtVec(X0), "||ΔX||∞":"—" }];
   logger.section("QUÁ TRÌNH LẶP");
   while(step<maxIter){

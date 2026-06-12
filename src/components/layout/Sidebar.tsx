@@ -9,8 +9,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
-  const isActive = (group: string, method: string) => {
-    return pathname.includes(`/${group}/${method}`);
+  const isActive = (method: string) => {
+    return pathname.includes(`/${method}`);
   };
 
   return (
@@ -49,11 +49,11 @@ export default function Sidebar() {
             <ul className="algo-list" role="list">
               {section.methods.map((method) => {
                 const cfg = ALGORITHM_CONFIG[method];
-                const active = isActive(section.group, method);
+                const active = isActive(method);
                 return (
                   <li key={method}>
                     <Link
-                      href={`/${section.group}/${method}`}
+                      href={`/${method}`}
                       className={`algo-btn ${active ? "algo-btn--active" : ""}`}
                       title={collapsed ? cfg.title : undefined}
                     >
