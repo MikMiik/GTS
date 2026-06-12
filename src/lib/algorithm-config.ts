@@ -6,6 +6,7 @@ import { runGauss } from "@/lib/algorithms/gauss";
 import { runGaussJordan } from "@/lib/algorithms/gaussjordan";
 import { runNewtonSystem } from "@/lib/algorithms/newton-system";
 import { runLapDonSystem } from "@/lib/algorithms/lapdon-system";
+import { runDanilevsky } from "@/lib/algorithms/danilevsky";
 import type { AlgoConfig, AlgorithmKey, Logger } from "@/types/solver";
 
 export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
@@ -111,6 +112,17 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     run: (params: Record<string, string>, logger: Logger) =>
       runLapDonSystem(params, logger),
   },
+  danilevsky: {
+    title: "Phương Pháp Danilevsky",
+    subtitle: "Tìm Đa Thức Đặc Trưng",
+    group: "algebra",
+    icon: "Δ",
+    defaultValues: {
+      matA: "2 1 0 3 1\n1 3 1 2 0\n0 1 4 1 2\n1 2 0 3 1\n0 0 3 4 2",
+    },
+    run: (params: Record<string, string>, logger: Logger) =>
+      runDanilevsky(params, logger),
+  },
 };
 
 export const SIDEBAR_SECTIONS = [
@@ -128,5 +140,10 @@ export const SIDEBAR_SECTIONS = [
     label: "Hệ phương trình phi tuyến",
     methods: ["newton-system", "lapdon-system"] as AlgorithmKey[],
     group: "nonlinear-system",
+  },
+  {
+    label: "Đại số tuyến tính",
+    methods: ["danilevsky"] as AlgorithmKey[],
+    group: "algebra",
   },
 ] as const;

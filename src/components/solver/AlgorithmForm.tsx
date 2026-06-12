@@ -87,6 +87,7 @@ function FormFields({ method, onChange, onKeyDown }: FieldProps & { method: Algo
     case "gaussjordan": return <GaussJordanFields onChange={onChange} />;
     case "newton-system": return <NewtonSystemFields onChange={onChange} onKeyDown={onKeyDown} />;
     case "lapdon-system": return <LapDonSystemFields onChange={onChange} onKeyDown={onKeyDown} />;
+    case "danilevsky": return <DanilevskyFields onChange={onChange} />;
     default: return null;
   }
 }
@@ -308,6 +309,22 @@ function LapDonSystemFields({ onChange, onKeyDown }: FieldProps) {
           <label className="form-label" htmlFor="in-eps">Sai số <code>ε</code></label>
           <input className="form-input" id="in-eps" name="epsilon" type="text" onChange={onChange} onKeyDown={onKeyDown} />
         </div>
+      </div>
+    </>
+  );
+}
+
+function DanilevskyFields({ onChange }: { onChange: React.ChangeEventHandler<HTMLTextAreaElement> }) {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông cấp n, mỗi hàng trên một dòng, các giá trị cách nhau bằng khoảng trắng hoặc dấu phẩy.<br />
+        Ví dụ: <code>2 1 0 3 1</code>
+      </div>
+      <div className="form-section-title">Ma trận A (n × n)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận vuông A</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={6} spellCheck={false} onChange={onChange} />
       </div>
     </>
   );

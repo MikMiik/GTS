@@ -1,7 +1,6 @@
 ﻿import SolverShell from "@/components/solver/SolverShell";
 import type { Metadata } from "next";
 import { ALGORITHM_CONFIG } from "@/lib/algorithm-config";
-import type { AlgorithmKey } from "@/types/solver";
 
 export const metadata: Metadata = {
   title: `${ALGORITHM_CONFIG['tieptuyen'].title} | GTS`,
@@ -11,4 +10,5 @@ export const metadata: Metadata = {
 export default function Page() {
   return <SolverShell method="tieptuyen" />;
 }
+
 

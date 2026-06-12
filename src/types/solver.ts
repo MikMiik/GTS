@@ -24,12 +24,13 @@ export type AlgorithmKey =
   | "gauss"
   | "gaussjordan"
   | "newton-system"
-  | "lapdon-system";
+  | "lapdon-system"
+  | "danilevsky";
 
 export interface AlgoConfig {
   title: string;
   subtitle: string;
-  group: "nonlinear-1d" | "linear-system" | "nonlinear-system";
+  group: "nonlinear-1d" | "linear-system" | "nonlinear-system" | "algebra";
   icon: string;
   defaultValues: Record<string, string>;
   run: (params: Record<string, string>, logger: Logger) => void;
