@@ -239,17 +239,6 @@ code, pre, .form-input, .form-textarea {
   margin-bottom: 8px;
 }
 
-.sidebar-section-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-  padding: 8px 8px 4px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
 .algo-list {
   list-style: none;
   display: flex;
@@ -767,7 +756,6 @@ code, pre, .form-input, .form-textarea {
   }
   .sidebar { width: var(--sidebar-collapsed); }
   .sidebar-logo-text,
-  .sidebar-section-label,
   .algo-info { display: none; }
   .solver-topbar { padding: 0 12px; }
   .page-title { font-size: 15px; }

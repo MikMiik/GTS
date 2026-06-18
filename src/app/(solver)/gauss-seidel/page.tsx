@@ -1,5 +1,5 @@
 import SolverShell from "@/components/solver/SolverShell";
 
 export default function Page() {
-  return <SolverShell method="danilevsky" />;
+  return <SolverShell method="gauss-seidel" />;
 }

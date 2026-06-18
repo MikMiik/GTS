@@ -13,7 +13,7 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
   if(x0Arr.length<3){ logger.error("Cần đúng 3 giá trị cho X₀ = [x₁, x₂, x₃]."); return; }
   const q=parseFloat(qIn), eps=parseFloat(epsilon);
   if(isNaN(q)||isNaN(eps)){ logger.error("q và epsilon phải là số hợp lệ."); return; }
-  if(q>=1){ logger.error("Hệ số co q phải nhỏ hơn 1."); return; }
+  if(q>=1 || q<=0){ logger.error("Hệ số co q phải nằm trong khoảng (0, 1)."); return; }
   if(eps<=0){ logger.error("Epsilon phải là số dương."); return; }
   fixedPointSystem(x0Arr, q, eps, 100, logger);
 }

@@ -41,11 +41,8 @@ export default function Sidebar() {
 
       {/* Navigation sections */}
       <nav className="sidebar-nav">
-        {SIDEBAR_SECTIONS.map((section) => (
-          <div key={section.group} className="sidebar-section">
-            {!collapsed && (
-              <div className="sidebar-section-label">{section.label}</div>
-            )}
+        {SIDEBAR_SECTIONS.map((section, idx) => (
+          <div key={section.methods[0] ?? idx} className="sidebar-section">
             <ul className="algo-list" role="list">
               {section.methods.map((method) => {
                 const cfg = ALGORITHM_CONFIG[method];

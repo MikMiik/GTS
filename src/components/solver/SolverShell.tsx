@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { AlgorithmKey, LogEntry } from "@/types/solver";
 import { ALGORITHM_CONFIG } from "@/lib/algorithm-config";
 import { createLogger } from "@/lib/algorithms/logger";
@@ -11,50 +11,11 @@ interface SolverShellProps {
   method: AlgorithmKey;
 }
 
-const LS_PREFIX = "gts-v2-";
-
 export default function SolverShell({ method }: SolverShellProps) {
   const cfg = ALGORITHM_CONFIG[method];
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [logCount, setLogCount] = useState(0);
   const outputRef = useRef<HTMLDivElement>(null);
-
-  // Load saved form values from localStorage
-  const getStoredValues = useCallback((): Record<string, string> => {
-    const saved: Record<string, string> = {};
-    if (typeof window === "undefined") return saved;
-    for (const key of Object.keys(cfg.defaultValues)) {
-      const stored = localStorage.getItem(`${LS_PREFIX}${method}-${key}`);
-      if (stored !== null) saved[key] = stored;
-    }
-    return saved;
-  }, [method, cfg.defaultValues]);
-
-  // Save a field to localStorage
-  const saveField = useCallback(
-    (field: string, value: string) => {
-      if (typeof window === "undefined") return;
-      try {
-        localStorage.setItem(`${LS_PREFIX}${method}-${field}`, value);
-      } catch {
-        /* quota exceeded */
-      }
-    },
-    [method],
-  );
-
-  // Persist chosen algo
-  useEffect(() => {
-    try {
-      localStorage.setItem(`${LS_PREFIX}last-algo`, method);
-    } catch {
-      /* ignore */
-    }
-  }, [method]);
-
-  // Derived reset: when method changes, the parent page re-mounts this component
-  // via React key={method}, so state is automatically reset — no effect needed.
 
   const handleRun = useCallback(
     (params: Record<string, string>) => {
@@ -72,16 +33,11 @@ export default function SolverShell({ method }: SolverShellProps) {
           const logger = createLogger();
           cfg.run(parsed, logger);
           setLogEntries(logger.entries);
-          const count = logger.entries.filter(
-            (e) => e.type !== "separator",
-          ).length;
-          setLogCount(count);
           if (outputRef.current) outputRef.current.scrollTop = 0;
         } catch (err) {
           const logger = createLogger();
           logger.error("Lỗi không xác định: " + (err as Error).message);
           setLogEntries(logger.entries);
-          setLogCount(1);
         } finally {
           setIsRunning(false);
         }
@@ -92,7 +48,6 @@ export default function SolverShell({ method }: SolverShellProps) {
 
   const handleClear = useCallback(() => {
     setLogEntries([]);
-    setLogCount(0);
   }, []);
 
   return (
@@ -141,10 +96,8 @@ export default function SolverShell({ method }: SolverShellProps) {
             <AlgorithmForm
               method={method}
               defaultValues={cfg.defaultValues}
-              storedValues={getStoredValues()}
-              onFieldChange={saveField}
               onSubmit={handleRun}
-            />
+            />{" "}
           </div>
         </section>
 
@@ -152,8 +105,7 @@ export default function SolverShell({ method }: SolverShellProps) {
         <section className="panel panel-output" aria-label="Output">
           <div className="panel-header">
             <span className="panel-icon">📤</span>
-            <h2>Output — Log</h2>
-            <span className="log-count">{logCount} mục</span>
+            <h2>Output</h2>{" "}
           </div>
           <div className="panel-body log-container" ref={outputRef}>
             <LogOutput entries={logEntries} />

@@ -12,7 +12,7 @@ export function runLapDon(params: Record<string, string>, logger: Logger): void 
   }
   const x0=parseFloat(x0In), q=parseFloat(qIn), eps=parseFloat(epsilon);
   if([x0,q,eps].some(isNaN)){ logger.error("Tham số không hợp lệ."); return; }
-  if(q>=1){ logger.error("Hệ số co q phải nhỏ hơn 1 (q < 1)."); return; }
+  if(q>=1 || q<=0){ logger.error("Hệ số co q phải nằm trong khoảng (0, 1)."); return; }
   if(eps<=0){ logger.error("Epsilon phải là số dương."); return; }
   fixedPoint1D(phi, x0, q, eps, 100, logger);
 }

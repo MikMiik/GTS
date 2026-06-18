@@ -23,6 +23,7 @@ export type AlgorithmKey =
   | "lapdon"
   | "gauss"
   | "gaussjordan"
+  | "gauss-seidel"
   | "newton-system"
   | "lapdon-system"
   | "danilevsky";
@@ -30,7 +31,6 @@ export type AlgorithmKey =
 export interface AlgoConfig {
   title: string;
   subtitle: string;
-  group: "nonlinear-1d" | "linear-system" | "nonlinear-system" | "algebra";
   icon: string;
   defaultValues: Record<string, string>;
   run: (params: Record<string, string>, logger: Logger) => void;
@@ -58,7 +58,7 @@ export const NONLINEAR_1D_METHODS = [
   "lapdon",
 ] as const;
 
-export const LINEAR_SYSTEM_METHODS = ["gauss", "gaussjordan"] as const;
+export const LINEAR_SYSTEM_METHODS = ["gauss", "gaussjordan", "gauss-seidel"] as const;
 
 export const NONLINEAR_SYSTEM_METHODS = [
   "newton-system",
