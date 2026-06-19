@@ -74,9 +74,15 @@ function FormFields({ method, onKeyDown }: FieldProps & { method: AlgorithmKey }
     case "gauss":     return <MatrixFields />;
     case "gaussjordan": return <GaussJordanFields />;
     case "gauss-seidel": return <GaussSeidelFields onKeyDown={onKeyDown} />;
+    case "lu-decompose": return <LuDecomposeFields />;
+    case "lu-solve": return <LuSolveFields />;
+    case "cholesky-decompose": return <CholeskyDecomposeFields />;
+    case "cholesky-solve": return <CholeskySolveFields />;
     case "newton-system": return <NewtonSystemFields onKeyDown={onKeyDown} />;
     case "lapdon-system": return <LapDonSystemFields onKeyDown={onKeyDown} />;
     case "danilevsky": return <DanilevskyFields />;
+    case "power-eigen":
+      return <PowerEigenFields onKeyDown={onKeyDown} />;
     default: return null;
   }
 }
@@ -340,6 +346,39 @@ function LapDonSystemFields({ onKeyDown }: FieldProps) {
   );
 }
 
+
+function PowerEigenFields({ onKeyDown }: FieldProps) {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và vector ban đầu x⁽⁰⁾ ≠ 0.<br />
+        Ví dụ hàng A: <code>4 1</code>
+      </div>
+      <div className="form-section-title">Ma trận A (n × n)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận A</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={4} spellCheck={false} />
+      </div>
+      <div className="form-section-title">Tham số lặp</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-x0">Vector ban đầu x⁽⁰⁾</label>
+        <input className="form-input" id="in-x0" name="x0Str" type="text" spellCheck={false} onKeyDown={onKeyDown} />
+        <div className="form-hint">Ví dụ: <code>1 1</code></div>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-eps">Sai số <code>ε</code></label>
+          <input className="form-input" id="in-eps" name="epsilon" type="text" onKeyDown={onKeyDown} />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-maxIter">Số lặp tối đa <code>N</code></label>
+          <input className="form-input" id="in-maxIter" name="maxIter" type="number" min="1" step="1" onKeyDown={onKeyDown} />
+        </div>
+      </div>
+    </>
+  );
+}
+
 function DanilevskyFields() {
   return (
     <>
@@ -351,6 +390,80 @@ function DanilevskyFields() {
       <div className="form-group">
         <label className="form-label" htmlFor="in-matA">Ma trận vuông A</label>
         <textarea className="form-textarea" id="in-matA" name="matA" rows={6} spellCheck={false} />
+      </div>
+    </>
+  );
+}
+
+function LuDecomposeFields() {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông A (mỗi hàng một dòng), các giá trị cách nhau bằng khoảng trắng hoặc dấu phẩy.<br />
+        Ví dụ: <code>2 2 0</code>
+      </div>
+      <div className="form-section-title">Ma trận A (n × n)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận vuông A</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={6} spellCheck={false} />
+      </div>
+    </>
+  );
+}
+
+function CholeskyDecomposeFields() {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông đối xứng xác định dương A (mỗi hàng một dòng).<br />
+        Ví dụ: <code>1 1 1</code>
+      </div>
+      <div className="form-section-title">Ma trận A (n × n, đối xứng SPD)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận A</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={8} spellCheck={false} />
+      </div>
+    </>
+  );
+}
+
+function CholeskySolveFields() {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông đối xứng xác định dương A và vector B (mỗi dòng một giá trị).<br />
+        Ví dụ hàng A: <code>1 1 1</code>
+      </div>
+      <div className="form-section-title">Ma trận A (hệ số, đối xứng SPD)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận A (n × n)</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={7} spellCheck={false} />
+      </div>
+      <div className="form-section-title">Vector B (vế phải)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-vecB">Vector B (mỗi dòng 1 giá trị)</label>
+        <textarea className="form-textarea" id="in-vecB" name="vecB" rows={4} spellCheck={false} />
+      </div>
+    </>
+  );
+}
+
+function LuSolveFields() {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và vector B (mỗi dòng một giá trị).<br />
+        Ví dụ hàng A: <code>2 2 0</code>
+      </div>
+      <div className="form-section-title">Ma trận A (hệ số)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận A (n × n)</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={6} spellCheck={false} />
+      </div>
+      <div className="form-section-title">Vector B (vế phải)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-vecB">Vector B (mỗi dòng 1 giá trị)</label>
+        <textarea className="form-textarea" id="in-vecB" name="vecB" rows={4} spellCheck={false} />
       </div>
     </>
   );

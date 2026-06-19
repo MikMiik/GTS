@@ -8,6 +8,11 @@ import { runNewtonSystem } from "@/lib/algorithms/newton-system";
 import { runLapDonSystem } from "@/lib/algorithms/lapdon-system";
 import { runDanilevsky } from "@/lib/algorithms/danilevsky";
 import { runGaussSeidel } from "@/lib/algorithms/gauss-seidel";
+import { runPowerEigen } from "@/lib/algorithms/power-eigen";
+import { runLuDecompose } from "@/lib/algorithms/lu-decompose";
+import { runLuSolve } from "@/lib/algorithms/lu-solve";
+import { runCholeskyDecompose } from "@/lib/algorithms/cholesky-decompose";
+import { runCholeskySolve } from "@/lib/algorithms/cholesky-solve";
 import type { AlgoConfig, AlgorithmKey, Logger } from "@/types/solver";
 
 export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
@@ -128,6 +133,60 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     run: (params: Record<string, string>, logger: Logger) =>
       runDanilevsky(params, logger),
   },
+  "power-eigen": {
+    title: "Phương Pháp Lũy Thừa",
+    subtitle: "Power Iteration — Giá Trị Riêng Trội",
+    icon: "λ",
+    defaultValues: {
+      matA: "4 1\n2 3",
+      x0Str: "1 1",
+      epsilon: "1e-6",
+      maxIter: "100",
+    },
+    run: runPowerEigen,
+  },
+  "lu-decompose": {
+    title: "Phân Tách LU",
+    subtitle: "LU Decomposition — A = LU",
+    icon: "LU",
+    defaultValues: {
+      matA:
+        "2 2 0 0 0 0\n1 4 6 0 0 0\n0 1 4 2 0 0\n0 0 1 5 8 0\n0 0 0 1 4 2\n0 0 0 0 1 4",
+    },
+    run: runLuDecompose,
+  },
+  "lu-solve": {
+    title: "Phân Tách LU Giải AX = B",
+    subtitle: "LU Factorization — Ax = b",
+    icon: "▧",
+    defaultValues: {
+      matA:
+        "2 2 0 0 0 0 0\n1 3 2 0 0 0 0\n0 1 3 2 0 0 0\n0 0 1 3 2 0 0\n0 0 0 1 3 2 0\n0 0 0 0 1 3 2\n0 0 0 0 0 1 3",
+      vecB: "4\n6\n6\n6\n6\n6\n4",
+    },
+    run: runLuSolve,
+  },
+  "cholesky-decompose": {
+    title: "Phân Tách Cholesky",
+    subtitle: "Cholesky Decomposition — A = LL^T",
+    icon: "L²",
+    defaultValues: {
+      matA:
+        "1 1 1 1 1 1 1 1\n1 2 2 2 2 2 2 2\n1 2 3 3 3 3 3 3\n1 2 3 4 4 4 4 4\n1 2 3 4 5 5 5 5\n1 2 3 4 5 6 6 6\n1 2 3 4 5 6 7 7\n1 2 3 4 5 6 7 8",
+    },
+    run: runCholeskyDecompose,
+  },
+  "cholesky-solve": {
+    title: "Phân Tách Cholesky Giải AX = B",
+    subtitle: "Cholesky Factorization — Ax = b",
+    icon: "◣",
+    defaultValues: {
+      matA:
+        "1 1 1 1 1 1 1\n1 2 2 2 2 2 2\n1 2 3 3 3 3 3\n1 2 3 4 4 4 4\n1 2 3 4 5 5 5\n1 2 3 4 5 6 6\n1 2 3 4 5 6 7",
+      vecB: "7\n13\n18\n22\n25\n27\n28",
+    },
+    run: runCholeskySolve,
+  },
 };
 
 export const SIDEBAR_SECTIONS = [
@@ -135,12 +194,20 @@ export const SIDEBAR_SECTIONS = [
     methods: ["bisection", "tieptuyen", "daycung", "lapdon"] as AlgorithmKey[],
   },
   {
-    methods: ["gauss", "gaussjordan", "gauss-seidel"] as AlgorithmKey[],
+    methods: [
+      "gauss",
+      "gaussjordan",
+      "gauss-seidel",
+      "lu-decompose",
+      "lu-solve",
+      "cholesky-decompose",
+      "cholesky-solve",
+    ] as AlgorithmKey[],
   },
   {
     methods: ["newton-system", "lapdon-system"] as AlgorithmKey[],
   },
   {
-    methods: ["danilevsky"] as AlgorithmKey[],
+    methods: ["danilevsky", "power-eigen"] as AlgorithmKey[],
   },
 ] as const;

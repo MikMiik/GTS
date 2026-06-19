@@ -26,7 +26,12 @@ export type AlgorithmKey =
   | "gauss-seidel"
   | "newton-system"
   | "lapdon-system"
-  | "danilevsky";
+  | "danilevsky"
+  | "power-eigen"
+  | "lu-decompose"
+  | "lu-solve"
+  | "cholesky-decompose"
+  | "cholesky-solve";
 
 export interface AlgoConfig {
   title: string;
@@ -58,9 +63,19 @@ export const NONLINEAR_1D_METHODS = [
   "lapdon",
 ] as const;
 
-export const LINEAR_SYSTEM_METHODS = ["gauss", "gaussjordan", "gauss-seidel"] as const;
+export const LINEAR_SYSTEM_METHODS = [
+  "gauss",
+  "gaussjordan",
+  "gauss-seidel",
+  "lu-decompose",
+  "lu-solve",
+  "cholesky-decompose",
+  "cholesky-solve",
+] as const;
 
 export const NONLINEAR_SYSTEM_METHODS = [
   "newton-system",
   "lapdon-system",
 ] as const;
+
+export const EIGENVALUE_METHODS = ["danilevsky", "power-eigen"] as const;
