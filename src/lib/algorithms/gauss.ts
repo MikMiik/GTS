@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 export function runGauss(params: Record<string, string>, logger: Logger): void {
   const { matA, matB } = params;
@@ -20,11 +21,13 @@ export function runGauss(params: Record<string, string>, logger: Logger): void {
 }
 
 function parseMatrix(text: string): number[][] {
-  const lines = text.trim().split("\n").filter(l => l.trim() !== "");
-  return lines.map((line,i) => {
-    const vals = line.trim().split(/[\s,;]+/).map(v => {
-      const n = parseFloat(v);
-      if(isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i+1}`);
+  const lines = text.trim().split("\n").filter((l) => l.trim() !== "");
+  if (lines.length === 0) throw new Error("Ma trận rỗng");
+  return lines.map((line, i) => {
+    const normalizedLine = line.replace(/\s*\/\s*/g, '/');
+    const vals = normalizedLine.trim().split(/[\s,;]+/).map((v) => {
+      const n = parseFraction(v);
+      if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
       return n;
     });
     return vals;
@@ -78,17 +81,18 @@ function solveGauss(A: number[][], B: number[][], logger: Logger) {
     for(let t=i+1;t<m;t++) if(Math.abs(M[t][j])>maxVal){ maxVal=Math.abs(M[t][j]); maxRow=t; }
     if(maxVal<1e-10){ logger.text(`Cột x${j+1} toàn 0, bỏ qua.`); j++; continue; }
     if(maxRow!==i){ [M[i],M[maxRow]]=[M[maxRow],M[i]]; logger.info(`Hoán vị hàng ${i+1} ↔ hàng ${maxRow+1}`); logger.table(fmtMatrix(M,n)); }
-    logger.step(`[Bước ${step}] Chọn phần tử khử: a(${i+1},${j+1}) = ${M[i][j].toFixed(4)}`);
+    logger.step(`[Bước ${step}] Chọn phần tử khử:`);
+    logger.formula(`$$a_{${i+1},${j+1}} = ${M[i][j].toFixed(4)}$$`);
     const ops: string[] = []; let changed=false;
     for(let k=i+1;k<m;k++){
       if(Math.abs(M[k][j])>1e-10){
         const factor=M[k][j]/M[i][j];
-        ops.push(`L${k+1} = L${k+1} - (${factor.toFixed(4)}) × L${i+1}`);
+        ops.push(`L_{${k+1}} = L_{${k+1}} - (${factor.toFixed(4)}) L_{${i+1}}`);
         for(let col=j;col<n+p;col++) M[k][col]-=factor*M[i][col];
         M[k][j]=0; changed=true;
       }
     }
-    if(changed){ logger.text(ops.join("\n")); logger.table(fmtMatrix(M,n)); }
+    if(changed){ logger.formula(`$$\\begin{cases} ${ops.join(" \\\\ ")} \\end{cases}$$`); logger.table(fmtMatrix(M,n)); }
     step++; pivotCols.push({row:i,col:j}); i++; j++;
   }
   logger.success("Kết thúc quy trình thuận.");
@@ -97,14 +101,14 @@ function solveGauss(A: number[][], B: number[][], logger: Logger) {
   for(let r=0;r<m;r++){
     if(!pivotRowSet.has(r)){
       for(let k=0;k<p;k++){
-        if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho 0 = ${M[r][n+k].toFixed(4)}`); return null; }
+        if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho $$0 = ${M[r][n+k].toFixed(4)}$$`); return null; }
       }
     }
   }
   const pivotColSet=new Set(pivotCols.map(pc=>pc.col));
   const freeCols: number[] = [];
   for(let c=0;c<n;c++) if(!pivotColSet.has(c)) freeCols.push(c);
-  if(freeCols.length>0){ logger.warn(`Phát hiện ${freeCols.length} biến tự do:`); freeCols.forEach((fc,idx)=>logger.info(`  Đặt x${fc+1} = t${idx+1} (∈ ℝ)`)); }
+  if(freeCols.length>0){ logger.warn(`Phát hiện ${freeCols.length} biến tự do:`); freeCols.forEach((fc,idx)=>logger.formula(`$$x_{${fc+1}} = t_{${idx+1}} \\in \\mathbb{R}$$`)); }
   const X: Expr[][] = Array.from({length:n},()=>Array.from({length:p},()=>({const:0,terms:{}})));
   freeCols.forEach((fc,idx)=>{ const tName=`t${idx+1}`; for(let k=0;k<p;k++) X[fc][k]={const:0,terms:{[tName]:1}}; });
   for(let idx=pivotCols.length-1;idx>=0;idx--){
@@ -124,7 +128,7 @@ function solveGauss(A: number[][], B: number[][], logger: Logger) {
       const resTerms: Record<string,number>={};
       for(const [t,tv] of Object.entries(sumT)){ const v=-tv/heSo; if(Math.abs(v)>1e-10) resTerms[t]=v; }
       X[pc][k]={const:resConst,terms:resTerms};
-      logger.text(`  Cột b${k+1}: x${pc+1} = ${fmtExpr(X[pc][k])}`);
+      logger.formula(`Cột $b_{${k+1}}$: $$x_{${pc+1}} = ${fmtExpr(X[pc][k]).replace(/t(\d+)/g, "t_{$1}").replace(/\*/g, " ")}$$`);
     }
   }
   logger.section("MA TRẬN NGHIỆM X");

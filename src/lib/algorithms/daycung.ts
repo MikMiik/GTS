@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 export function runDayCung(params: Record<string, string>, logger: Logger): void {
   const { fStr, a: aIn, b: bIn, epsilon } = params;
@@ -10,7 +11,7 @@ export function runDayCung(params: Record<string, string>, logger: Logger): void
     logger.error("Lỗi cú pháp hàm f(x): " + (e as Error).message);
     return;
   }
-  const a = parseFloat(aIn), b = parseFloat(bIn), eps = parseFloat(epsilon);
+  const a = parseFraction(aIn), b = parseFraction(bIn), eps = parseFraction(epsilon);
   if ([a, b, eps].some(isNaN)) { logger.error("Tham số không hợp lệ."); return; }
   if (eps <= 0) { logger.error("Epsilon phải là số dương."); return; }
   solveDayCung(f, a, b, eps, 100, logger);
@@ -47,26 +48,26 @@ function fmt(v: number, d: number) {
 function solveDayCung(f: (x: number) => number, a: number, b: number, epsilon: number, maxIter: number, logger: Logger) {
   logger.section("KIỂM TRA ĐIỀU KIỆN");
   const fa=f(a), fb=f(b);
-  logger.info(`f(a) = f(${a}) = ${fa.toFixed(6)}`);
-  logger.info(`f(b) = f(${b}) = ${fb.toFixed(6)}`);
-  if(fa*fb>=0){ logger.error("f(a)·f(b) ≥ 0 — không phải khoảng cách ly nghiệm!"); return; }
-  logger.success("✔ f(a)·f(b) < 0 — khoảng hợp lệ.");
+  logger.info(`$$f(a) = f(${a}) = ${fa.toFixed(6)}$$`);
+  logger.info(`$$f(b) = f(${b}) = ${fb.toFixed(6)}$$`);
+  if(fa*fb>=0){ logger.error("$$f(a) \\cdot f(b) \\ge 0$$ — không phải khoảng cách ly nghiệm!"); return; }
+  logger.success("✔ $$f(a) \\cdot f(b) < 0$$ — khoảng hợp lệ.");
   const { tableDecimals, reliableDigits } = prec(epsilon);
   const { m1, M1 } = estimateM(f,a,b);
   logger.section("ƯỚC LƯỢNG m₁, M₁");
-  logger.info(`m₁ ≈ ${m1.toFixed(6)}, M₁ ≈ ${M1.toFixed(6)}, q = ${((M1-m1)/m1).toFixed(6)}`);
-  if(m1<1e-14){ logger.error("m₁ ≈ 0, phương pháp không áp dụng được."); return; }
+  logger.info(`$$m_1 \\approx ${m1.toFixed(6)}, M_1 \\approx ${M1.toFixed(6)}, q = ${((M1-m1)/m1).toFixed(6)}$$`);
+  if(m1<1e-14){ logger.error("$$m_1 \\approx 0$$, phương pháp không áp dụng được."); return; }
   const fda=nd2(f,a), fdb=nd2(f,b);
   logger.section("XÁC ĐỊNH ĐIỂM FOURIER");
-  logger.info(`f''(a)·f(a) = ${(fa*fda).toFixed(6)}, f''(b)·f(b) = ${(fb*fdb).toFixed(6)}`);
+  logger.info(`$$f''(a) \\cdot f(a) = ${(fa*fda).toFixed(6)}, f''(b) \\cdot f(b) = ${(fb*fdb).toFixed(6)}$$`);
   let d: number, x0: number;
-  if(fa*fda>0){ d=a; x0=b; logger.success(`d = a = ${a}, x₀ = b = ${b}`); }
-  else if(fb*fdb>0){ d=b; x0=a; logger.success(`d = b = ${b}, x₀ = a = ${a}`); }
+  if(fa*fda>0){ d=a; x0=b; logger.success(`$$d = a = ${a}, x_0 = b = ${b}$$`); }
+  else if(fb*fdb>0){ d=b; x0=a; logger.success(`$$d = b = ${b}, x_0 = a = ${a}$$`); }
   else{ logger.error("Không tìm được điểm Fourier."); return; }
   const fd=f(d);
   logger.section("QUÁ TRÌNH LẶP");
-  logger.formula("Công thức: xₖ₊₁ = xₖ - f(xₖ)·(xₖ - d) / (f(xₖ) - f(d))");
-  logger.text(`d = ${d} (cố định), f(d) = ${fd.toFixed(8)}`);
+  logger.formula("Công thức: $$x_{k+1} = x_k - \\frac{f(x_k) \\cdot (x_k - d)}{f(x_k) - f(d)}$$");
+  logger.text(`$$d = ${d}$$ (cố định), $$f(d) = ${fd.toFixed(8)}$$`);
   let xk=x0, xPrev: number|null=null;
   const tableData: Record<string,unknown>[] = [];
   for(let k=0;k<maxIter;k++){
@@ -80,12 +81,12 @@ function solveDayCung(f: (x: number) => number, a: number, b: number, epsilon: n
       logger.table(tableData); logger.separator();
       logger.success(`✔ Hội tụ tại bước k = ${k}`);
       const xR=rnd(xNext,reliableDigits);
-      logger.result(`Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): x* ≈ ${xR}`);
-      logger.info(`f(x*) = ${fxNext.toExponential(6)}`); return;
+      logger.result(`Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x^* \\approx ${xR}$$`);
+      logger.info(`$$f(x^*) = ${fxNext.toExponential(6)}$$`); return;
     }
     xPrev=xk; xk=xNext;
   }
   logger.table(tableData);
-  logger.warn(`Không hội tụ sau ${maxIter} bước. x ≈ ${fmt(xk,tableDecimals)}`);
-  logger.result(`x ≈ ${rnd(xk,reliableDigits)}`);
+  logger.warn(`Không hội tụ sau ${maxIter} bước. $$x \\approx ${fmt(xk,tableDecimals)}$$`);
+  logger.result(`$$x \\approx ${rnd(xk,reliableDigits)}$$`);
 }

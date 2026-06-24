@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 type NumMatrix = number[][];
 
@@ -9,20 +10,28 @@ const TABLE_DECIMALS = 4;
 // ---------------------------------------------------------------------------
 
 function parseMatrix(text: string): NumMatrix {
-  const lines = text.trim().split("\n").filter((l) => l.trim() !== "");
+  const lines = text
+    .trim()
+    .split("\n")
+    .filter((l) => l.trim() !== "");
   return lines.map((line, i) => {
-    const vals = line.trim().split(/[\s,;]+/).map((v) => {
-      const n = parseFloat(v);
-      if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
-      return n;
-    });
+    const normalizedLine = line.replace(/\s*\/\s*/g, '/');
+    const vals = normalizedLine
+      .trim()
+      .split(/[\s,;]+/)
+      .map((v) => {
+        const n = parseFraction(v);
+        if (isNaN(n))
+          throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
+        return n;
+      });
     return vals;
   });
 }
 
 function parseVector(text: string): number[] {
-  const trimmed = text.trim();
-  if (!trimmed) throw new Error("Vector b không được rỗng");
+  const normalizedText = text.replace(/\s*\/\s*/g, '/');
+  const trimmed = normalizedText.trim();
   if (trimmed.includes("\n")) {
     return trimmed
       .split("\n")
@@ -30,15 +39,18 @@ function parseVector(text: string): number[] {
       .map((line, i) => {
         const parts = line.trim().split(/[\s,;]+/);
         if (parts.length !== 1) {
-          throw new Error(`Mỗi dòng của b chỉ chứa 1 giá trị (lỗi ở dòng ${i + 1})`);
+          throw new Error(
+            `Mỗi dòng của b chỉ chứa 1 giá trị (lỗi ở dòng ${i + 1})`,
+          );
         }
-        const n = parseFloat(parts[0]);
-        if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${parts[0]}" ở dòng ${i + 1}`);
+        const n = parseFraction(parts[0]);
+        if (isNaN(n))
+          throw new Error(`Giá trị không hợp lệ "${parts[0]}" ở dòng ${i + 1}`);
         return n;
       });
   }
   return trimmed.split(/[\s,;]+/).map((v) => {
-    const n = parseFloat(v);
+    const n = parseFraction(v);
     if (isNaN(n)) throw new Error(`Giá trị "${v}" không hợp lệ`);
     return n;
   });
@@ -52,10 +64,6 @@ function fmt(v: number, d = TABLE_DECIMALS): string {
   if (!Number.isFinite(v)) return String(v);
   if (Math.abs(v) < 1e-15) return "0";
   return v.toFixed(d);
-}
-
-function formatVec(vec: number[]): string {
-  return `[${vec.map((v) => fmt(v)).join(", ")}]`;
 }
 
 function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
@@ -100,7 +108,11 @@ function isColStrictDominant(A: NumMatrix): boolean {
 }
 
 /** Trường hợp chéo trội hàng: s = 0, tính q_i theo từng hàng */
-function computeRowCaseQS(A: NumMatrix): { s: number; q: number; qValues: number[] } {
+function computeRowCaseQS(A: NumMatrix): {
+  s: number;
+  q: number;
+  qValues: number[];
+} {
   const n = A.length;
   const qValues: number[] = [];
   for (let i = 0; i < n; i++) {
@@ -158,7 +170,11 @@ function gaussSeidelIterate(
   const xPrev = [...x0];
   const xCurr = [...x0];
   const tableData: Record<string, unknown>[] = [
-    { k: 0, ...Object.fromEntries(x0.map((v, i) => [`x${i + 1}`, fmt(v)])), "‖ΔX‖∞": "—" },
+    {
+      k: 0,
+      ...Object.fromEntries(x0.map((v, i) => [`x${i + 1}`, fmt(v)])),
+      "‖ΔX‖∞": "—",
+    },
   ];
 
   let k = 0;
@@ -201,7 +217,10 @@ function gaussSeidelIterate(
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function runGaussSeidel(params: Record<string, string>, logger: Logger): void {
+export function runGaussSeidel(
+  params: Record<string, string>,
+  logger: Logger,
+): void {
   const { matA, vecB, x0Str, epsilon, maxIter: maxIterStr } = params;
 
   let A: NumMatrix;
@@ -255,7 +274,9 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
 
   for (let i = 0; i < n; i++) {
     if (Math.abs(A[i][i]) < 1e-15) {
-      logger.error(`Phần tử đường chéo a(${i + 1},${i + 1}) = 0 — không thể áp dụng Gauss-Seidel.`);
+      logger.error(
+        `Phần tử đường chéo $$a_{${i + 1},${i + 1}} = 0$$ — không thể áp dụng Gauss-Seidel.`,
+      );
       return;
     }
   }
@@ -264,9 +285,13 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
   logger.info(`Kích thước: ${n} × ${n}`);
   logger.text("Ma trận A:");
   logger.table(formatMatrixForLog(A));
-  logger.info(`b = ${formatVec(b)}`);
-  logger.info(`X⁽⁰⁾ = ${formatVec(x0)}`);
-  logger.info(`ε = ${eps}, N = ${maxIter}`);
+  logger.info(
+    `$$b = \\begin{bmatrix} ${b.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
+  logger.info(
+    `$$X^{(0)} = \\begin{bmatrix} ${x0.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
+  logger.info(`$$\\varepsilon = ${eps}, N = ${maxIter}$$`);
 
   // Bước 1: Kiểm tra điều kiện hội tụ
   logger.section("KIỂM TRA ĐIỀU KIỆN HỘI TỤ");
@@ -275,14 +300,16 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
   const colDominant = isColStrictDominant(A);
 
   if (rowDominant) {
-    logger.success("Ma trận A chéo trội hàng ngặt → phương pháp Gauss-Seidel chắc chắn hội tụ.");
+    logger.success(
+      "Ma trận A chéo trội hàng ngặt → phương pháp Gauss-Seidel chắc chắn hội tụ.",
+    );
     for (let i = 0; i < n; i++) {
       let offDiag = 0;
       for (let j = 0; j < n; j++) {
         if (j !== i) offDiag += Math.abs(A[i][j]);
       }
       logger.info(
-        `Hàng ${i + 1}: |a${i + 1}${i + 1}| = ${fmt(Math.abs(A[i][i]))} > ${fmt(offDiag)} = Σ|a${i + 1}j| (j≠${i + 1})`,
+        `Hàng ${i + 1}: $$|a_{${i + 1}${i + 1}}| = ${fmt(Math.abs(A[i][i]))} > ${fmt(offDiag)} = \\sum_{j \\neq ${i + 1}} |a_{${i + 1}j}|$$`,
       );
     }
   } else {
@@ -294,7 +321,7 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
       }
       const ok = Math.abs(A[i][i]) > offDiag;
       logger.info(
-        `Hàng ${i + 1}: |a${i + 1}${i + 1}| = ${fmt(Math.abs(A[i][i]))} ${ok ? ">" : "≤"} ${fmt(offDiag)} ${ok ? "✓" : "✗"}`,
+        `Hàng ${i + 1}: $$|a_{${i + 1}${i + 1}}| = ${fmt(Math.abs(A[i][i]))} ${ok ? ">" : "\\le"} ${fmt(offDiag)}$$ ${ok ? "✓" : "✗"}`,
       );
     }
   }
@@ -310,28 +337,30 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
     q = result.q;
     logger.info("Áp dụng công thức chéo trội hàng: s = 0.");
     result.qValues.forEach((qi, i) => {
-      logger.info(`q${i + 1} = ${fmt(qi)}`);
+      logger.info(`$$q_{${i + 1}} = ${fmt(qi)}$$`);
     });
   } else if (colDominant) {
     dominanceType = "col";
-    logger.success("Ma trận A chéo trội cột ngặt → phương pháp Gauss-Seidel chắc chắn hội tụ.");
+    logger.success(
+      "Ma trận A chéo trội cột ngặt → phương pháp Gauss-Seidel chắc chắn hội tụ.",
+    );
     for (let j = 0; j < n; j++) {
       let offDiag = 0;
       for (let i = 0; i < n; i++) {
         if (i !== j) offDiag += Math.abs(A[i][j]);
       }
       logger.info(
-        `Cột ${j + 1}: |a${j + 1}${j + 1}| = ${fmt(Math.abs(A[j][j]))} > ${fmt(offDiag)} = Σ|aᵢ${j + 1}| (i≠${j + 1})`,
+        `Cột ${j + 1}: $$|a_{${j + 1}${j + 1}}| = ${fmt(Math.abs(A[j][j]))} > ${fmt(offDiag)} = \\sum_{i \\neq ${j + 1}} |a_{i${j + 1}}|$$`,
       );
     }
     const result = computeColCaseQS(A);
     s = result.s;
     q = result.q;
     result.sValues.forEach((sj, j) => {
-      logger.info(`s${j + 1} = ${fmt(sj)}`);
+      logger.info(`$$s_{${j + 1}} = ${fmt(sj)}$$`);
     });
     result.qValues.forEach((qj, j) => {
-      logger.info(`q${j + 1} = ${fmt(qj)}`);
+      logger.info(`$$q_{${j + 1}} = ${fmt(qj)}$$`);
     });
   } else {
     logger.error(
@@ -341,21 +370,27 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
   }
 
   if (q >= 1) {
-    logger.error(`Hệ số co q = ${fmt(q)} ≥ 1 — không đảm bảo hội tụ.`);
+    logger.error(`Hệ số co $$q = ${fmt(q)} \\ge 1$$ — không đảm bảo hội tụ.`);
     return;
   }
 
   // Bước 2: Chuẩn hóa sai số
   logger.section("HỆ SỐ CO VÀ CHUẨN HÓA SAI SỐ");
-  logger.info(`s = ${fmt(s)}, q = ${fmt(q)} (${dominanceType === "row" ? "chéo trội hàng" : "chéo trội cột"})`);
+  logger.info(
+    `$$s = ${fmt(s)}, q = ${fmt(q)}$$ (${dominanceType === "row" ? "chéo trội hàng" : "chéo trội cột"})`,
+  );
 
   const epsPrime = (eps * (1 - s) * (1 - q)) / q;
   const errorCoeff = q / ((1 - s) * (1 - q));
 
-  logger.formula("ε' = ε(1 − s)(1 − q) / q");
-  logger.info(`ε' = ${fmt(epsPrime)}`);
-  logger.formula("Điều kiện dừng: δ = ‖X⁽ᵏ⁾ − X⁽ᵏ⁻¹⁾‖∞ ≤ ε'");
-  logger.formula("Sai số hậu nghiệm: ‖X⁽ᵏ⁾ − x*‖ ≤ [q / ((1−s)(1−q))] · δ");
+  logger.formula("$$\\varepsilon' = \\frac{\\varepsilon(1 - s)(1 - q)}{q}$$");
+  logger.info(`$$\\varepsilon' = ${fmt(epsPrime)}$$`);
+  logger.formula(
+    "Điều kiện dừng: $$\\delta = \\|X^{(k)} - X^{(k-1)}\\|_\\infty \\le \\varepsilon'$$",
+  );
+  logger.formula(
+    "Sai số hậu nghiệm: $$\\left\\| X^{(k)} - x^* \\right\\| \\le \\frac{q}{(1-s)(1-q)} \\delta$$",
+  );
 
   // Pre-compute 1/a_ii
   const invDiag = A.map((row, i) => 1 / row[i]);
@@ -363,7 +398,7 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
   // Bước 3–4: Vòng lặp
   logger.section("QUÁ TRÌNH LẶP");
   logger.formula(
-    "xᵢ⁽ᵏ⁾ = (1/aᵢᵢ) · (bᵢ − Σⱼ<ᵢ aᵢⱼxⱼ⁽ᵏ⁾ − Σⱼ>ᵢ aᵢⱼxⱼ⁽ᵏ⁻¹⁾)",
+    "$$x_i^{(k)} = \\frac{1}{a_{ii}} \\left( b_i - \\sum_{j<i} a_{ij}x_j^{(k)} - \\sum_{j>i} a_{ij}x_j^{(k-1)} \\right)$$",
   );
 
   const { converged, k, x, delta } = gaussSeidelIterate(
@@ -377,19 +412,27 @@ export function runGaussSeidel(params: Record<string, string>, logger: Logger): 
   );
 
   logger.separator();
-  logger.text(`Ngưỡng dừng ε' = ${fmt(epsPrime)}`);
+  logger.text(`Ngưỡng dừng $$\\varepsilon' = ${fmt(epsPrime)}$$`);
 
   if (converged) {
     logger.success(`✔ Thỏa mãn điều kiện dừng tại bước k = ${k}.`);
-    logger.result(`Nghiệm xấp xỉ: X⁽${k}⁾ = ${formatVec(x)}`);
+    logger.result(
+      `Nghiệm xấp xỉ: $$X^{(${k})} = \\begin{bmatrix} ${x.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+    );
 
     const errorBound = errorCoeff * delta;
     logger.section("ĐÁNH GIÁ SAI SỐ HẬU NGHIỆM");
-    logger.info(`δ = ‖X⁽${k}⁾ − X⁽${k - 1}⁾‖∞ = ${fmt(delta)}`);
-    logger.formula(`‖X⁽${k}⁾ − x*‖ ≤ [q / ((1−s)(1−q))] · δ = ${fmt(errorCoeff)} × ${fmt(delta)}`);
-    logger.result(`Sai số không vượt quá: ${fmt(errorBound)}`);
+    logger.info(
+      `$$\\delta = \\left\\| X^{(${k})} - X^{(${k - 1})} \\right\\|_\\infty = ${fmt(delta)}$$`,
+    );
+    logger.formula(
+      `$$\\left\\| X^{(${k})} - x^* \\right\\| \\le \\frac{q}{(1-s)(1-q)} \\delta = ${fmt(errorCoeff)} \\times ${fmt(delta)}$$`,
+    );
+    logger.result(`Sai số không vượt quá: $$${fmt(errorBound)}$$`);
   } else {
     logger.warn(`⚠ Không đạt hội tụ sau ${maxIter} bước lặp.`);
-    logger.text(`Kết quả cuối: X⁽${k}⁾ = ${formatVec(x)}, δ = ${fmt(delta)}`);
+    logger.text(
+      `Kết quả cuối: $$X^{(${k})} = \\begin{bmatrix} ${x.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$, $$\\delta = ${fmt(delta)}$$`,
+    );
   }
 }

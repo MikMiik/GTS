@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 export function runBisection(
   params: Record<string, string>,
@@ -17,9 +18,9 @@ export function runBisection(
     return;
   }
 
-  const a_num = parseFloat(aIn);
-  const b_num = parseFloat(bIn);
-  const eps = parseFloat(epsilon);
+  const a_num = parseFraction(aIn);
+  const b_num = parseFraction(bIn);
+  const eps = parseFraction(epsilon);
 
   if (isNaN(a_num) || isNaN(b_num) || isNaN(eps)) {
     logger.error("Các tham số a, b, epsilon phải là số hợp lệ.");
@@ -66,17 +67,17 @@ function bisectionMethod(
   let fb = f(b);
 
   logger.section("KIỂM TRA ĐIỀU KIỆN ĐẦU VÀO");
-  logger.info(`f(a) = f(${a}) = ${fa.toFixed(8)}`);
-  logger.info(`f(b) = f(${b}) = ${fb.toFixed(8)}`);
-  logger.info(`f(a) × f(b) = ${(fa * fb).toExponential(4)}`);
+  logger.info(`$$f(a) = f(${a}) = ${fa.toFixed(8)}$$`);
+  logger.info(`$$f(b) = f(${b}) = ${fb.toFixed(8)}$$`);
+  logger.info(`$$f(a) \\cdot f(b) = ${(fa * fb).toExponential(4)}$$`);
 
   if (fa * fb >= 0) {
     logger.error(
-      "f(a) và f(b) phải trái dấu. Khoảng [a, b] không hợp lệ.",
+      "f(a) và f(b) phải trái dấu. Khoảng $[a, b]$ không hợp lệ.",
     );
     return;
   }
-  logger.success("✔ f(a)·f(b) < 0 — khoảng hợp lệ.");
+  logger.success("✔ $$f(a) \\cdot f(b) < 0$$ — khoảng hợp lệ.");
 
   const { tableDecimals, reliableDigits } = getPrecisionByEpsilon(epsilon);
 
@@ -87,9 +88,9 @@ function bisectionMethod(
   const tableData: Record<string, unknown>[] = [];
 
   logger.section("QUÁ TRÌNH LẶP");
-  logger.formula(`Công thức: c = (a + b) / 2`);
-  logger.text(
-    `Điều kiện dừng: |b - a| < ε = ${epsilon.toExponential(4)}`,
+  logger.formula(`Công thức: $$c = \\frac{a + b}{2}$$`);
+  logger.formula(
+    `Điều kiện dừng: $$|b - a| < \\varepsilon = ${epsilon.toExponential(4)}$$`,
   );
 
   while (n < maxIter) {
@@ -120,13 +121,13 @@ function bisectionMethod(
 
   logger.table(tableData);
   logger.separator();
-  logger.text(`Ngưỡng sai số yêu cầu (ε): ${epsilon.toExponential(4)}`);
+  logger.text(`Ngưỡng sai số yêu cầu: $$\\varepsilon = ${epsilon.toExponential(4)}$$`);
 
   if (diff < epsilon || z === 0) {
     logger.success(`✔ Thỏa mãn điều kiện dừng tại bước lặp n = ${n}.`);
     const xReliable = roundBySignificantDigits(c, reliableDigits);
     logger.result(
-      `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): x ≈ ${xReliable}`,
+      `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x \\approx ${xReliable}$$`,
     );
   } else {
     logger.warn(`⚠ Thuật toán không hội tụ sau ${maxIter} vòng lặp.`);

@@ -13,6 +13,7 @@ import { runLuDecompose } from "@/lib/algorithms/lu-decompose";
 import { runLuSolve } from "@/lib/algorithms/lu-solve";
 import { runCholeskyDecompose } from "@/lib/algorithms/cholesky-decompose";
 import { runCholeskySolve } from "@/lib/algorithms/cholesky-solve";
+import { runXuongThang } from "@/lib/algorithms/xuong-thang";
 import type { AlgoConfig, AlgorithmKey, Logger } from "@/types/solver";
 
 export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
@@ -187,6 +188,21 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     },
     run: runCholeskySolve,
   },
+  "xuong-thang": {
+    title: "Phương Pháp Xuống Thang",
+    subtitle: "Deflation Method — Giá Trị Riêng Trội Thứ 2",
+    icon: "📉",
+    defaultValues: {
+      matA: "4 2\n1 3",
+      lambda1Str: "5",
+      vecV1: "2 1",
+      vecY0: "1 1",
+      epsilon: "0.01",
+      maxIter: "100",
+      method: "C1",
+    },
+    run: runXuongThang,
+  },
 };
 
 export const SIDEBAR_SECTIONS = [
@@ -208,6 +224,6 @@ export const SIDEBAR_SECTIONS = [
     methods: ["newton-system", "lapdon-system"] as AlgorithmKey[],
   },
   {
-    methods: ["danilevsky", "power-eigen"] as AlgorithmKey[],
+    methods: ["danilevsky", "power-eigen", "xuong-thang"] as AlgorithmKey[],
   },
 ] as const;

@@ -46,7 +46,7 @@ function sumTermsCol(j: number, i: number, L: NumMatrix): string {
   for (let k = 1; k <= j - 1; k++) {
     const lik = fmt(L[i - 1][k - 1]);
     const ljk = fmt(L[j - 1][k - 1]);
-    parts.push(`${lik}·${ljk}`);
+    parts.push(`${lik} \\cdot ${ljk}`);
   }
   return parts.join(" + ");
 }
@@ -92,10 +92,10 @@ export function decomposeCholesky(
 
     let diagDetail: string;
     if (j === 1) {
-      diagDetail = `${subscript(j, j)} = √${subscriptA(j, j)} = √${fmt(A[j - 1][j - 1])} = ${fmt(ljj)}`;
+      diagDetail = `$$${subscript(j, j)} = \\sqrt{${subscriptA(j, j)}} = \\sqrt{${fmt(A[j - 1][j - 1])}} = ${fmt(ljj)}$$`;
     } else {
       const terms = sumSquaresCol(j, L);
-      diagDetail = `${subscript(j, j)} = √(${subscriptA(j, j)} − (${terms})) = √${fmt(radicand)} = ${fmt(ljj)}`;
+      diagDetail = `$$${subscript(j, j)} = \\sqrt{${subscriptA(j, j)} - (${terms})} = \\sqrt{${fmt(radicand)}} = ${fmt(ljj)}$$`;
     }
 
     const belowDiag: CholeskyStepInfo["belowDiag"] = [];
@@ -110,10 +110,10 @@ export function decomposeCholesky(
 
       let detail: string;
       if (j === 1) {
-        detail = `${subscript(i, j)} = ${subscriptA(i, j)}/${subscript(j, j)} = ${fmt(A[i - 1][j - 1])}/${fmt(ljj)} = ${fmt(val)}`;
+        detail = `$$${subscript(i, j)} = \\frac{${subscriptA(i, j)}}{${subscript(j, j)}} = \\frac{${fmt(A[i - 1][j - 1])}}{${fmt(ljj)}} = ${fmt(val)}$$`;
       } else {
         const terms = sumTermsCol(j, i, L);
-        detail = `${subscript(i, j)} = (${subscriptA(i, j)} − (${terms}))/${subscript(j, j)} = ${fmt(val)}`;
+        detail = `$$${subscript(i, j)} = \\frac{${subscriptA(i, j)} - (${terms})}{${subscript(j, j)}} = ${fmt(val)}$$`;
       }
       belowDiag.push({ i, value: val, detail });
     }
@@ -171,7 +171,7 @@ export function backSubTranspose(
       const term = lji * x[j - 1];
       sum += term;
       if (Math.abs(lji) > PIVOT_EPS) {
-        terms.push(`${fmt(lji)}·x_${j}`);
+        terms.push(`${fmt(lji)} x_{${j}}`);
       }
     }
     const val = (y[i - 1] - sum) / L[i - 1][i - 1];
@@ -179,10 +179,10 @@ export function backSubTranspose(
 
     let detail: string;
     if (i === n) {
-      detail = `x_${n} = y_${n}/l_{${n}${n}} = ${fmt(y[n - 1])}/${fmt(L[n - 1][n - 1])} = ${fmt(val)}`;
+      detail = `$$x_{${n}} = \\frac{y_{${n}}}{l_{${n}${n}}} = \\frac{${fmt(y[n - 1])}}{${fmt(L[n - 1][n - 1])}} = ${fmt(val)}$$`;
     } else {
       const termStr = terms.length > 0 ? terms.join(" + ") : "0";
-      detail = `x_${i} = (y_${i} − (${termStr}))/l_{${i}${i}} = (${fmt(y[i - 1])} − ${fmt(sum)})/${fmt(L[i - 1][i - 1])} = ${fmt(val)}`;
+      detail = `$$x_{${i}} = \\frac{y_{${i}} - (${termStr})}{l_{${i}${i}}} = \\frac{${fmt(y[i - 1])} - ${fmt(sum)}}{${fmt(L[i - 1][i - 1])}} = ${fmt(val)}$$`;
     }
     onStep?.({ i, value: val, detail });
   }
@@ -205,29 +205,29 @@ export function logCholeskyDecomposition(
   const verbose = n <= VERBOSE_THRESHOLD;
 
   logger.section(sectionTitle);
-  logger.info(`Khởi tạo: L tam giác dưới, l_ij = 0 khi i < j.`);
+  logger.info(`Khởi tạo: $L$ tam giác dưới, $l_{ij} = 0$ khi $i < j$.`);
 
   try {
     const L = decomposeCholesky(A, (step) => {
       logger.step(`j = ${step.j}`);
       logger.formula(
-        `l_{${step.j}${step.j}} = √(${subscriptA(step.j, step.j)} − Σ_{k=1}^{${step.j}−1} l_{${step.j}k}²)`,
+        `$$l_{${step.j}${step.j}} = \\sqrt{a_{${step.j}${step.j}} - \\sum_{k=1}^{${step.j}-1} l_{${step.j}k}^2}$$`,
       );
-      logger.info(`  ${step.diagDetail}`);
+      logger.formula(`  ${step.diagDetail}`);
 
       if (step.belowDiag.length > 0) {
         logger.formula(
-          `l_{ij} = (a_{ij} − Σ_{k=1}^{${step.j}−1} l_{ik}·l_{${step.j}k}) / l_{${step.j}${step.j}}  (i = ${step.j + 1}…${n})`,
+          `$$l_{ij} = \\frac{a_{ij} - \\sum_{k=1}^{${step.j}-1} l_{ik} l_{${step.j}k}}{l_{${step.j}${step.j}}} \\quad (i = ${step.j + 1} \\dots ${n})$$`,
         );
         if (verbose) {
           for (const entry of step.belowDiag) {
-            logger.info(`  ${entry.detail}`);
+            logger.formula(`  ${entry.detail}`);
           }
         } else {
           const vals = step.belowDiag
-            .map((e) => `l_${e.i}${step.j}=${fmt(e.value)}`)
+            .map((e) => `l_{${e.i}${step.j}}=${fmt(e.value)}`)
             .join(", ");
-          logger.info(`  ${vals}`);
+          logger.formula(`  $$${vals}$$`);
         }
       }
 

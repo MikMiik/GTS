@@ -66,25 +66,23 @@ export function runCholeskySolve(
   logger.table(formatMatrixForLog(L));
 
   logger.section("BƯỚC 2 (B2): GIẢI LY = B");
-  logger.formula("y_1 = b_1 / l_{11}");
-  logger.formula("y_i = (b_i − Σ_{j=1}^{i−1} l_ij y_j) / l_ii  (i = 2…n)");
+  logger.formula("$$y_1 = \\frac{b_1}{l_{11}}$$");
+  logger.formula("$$y_i = \\frac{b_i - \\sum_{j=1}^{i-1} l_{ij} y_j}{l_{ii}} \\quad (i = 2 \\dots n)$$");
 
   const Y = forwardSub(L, B, (step) => {
-    logger.info(step.detail);
+    logger.formula(step.detail);
   });
 
-  logger.result(`Y = ${formatVec(Y)}`);
+  logger.result(`$$Y = \\begin{bmatrix} ${Y.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
 
   logger.section("BƯỚC 3 (B3): GIẢI L^T X = Y");
-  logger.formula("x_n = y_n / l_{nn}");
-  logger.formula(
-    "x_i = (y_i − Σ_{j=i+1}^{n} l_{ji} x_j) / l_ii  (i = n−1…1)",
-  );
+  logger.formula("$$x_n = \\frac{y_n}{l_{nn}}$$");
+  logger.formula("$$x_i = \\frac{y_i - \\sum_{j=i+1}^{n} l_{ji} x_j}{l_{ii}} \\quad (i = n-1 \\dots 1)$$");
 
   const X = backSubTranspose(L, Y, (step) => {
-    logger.info(step.detail);
+    logger.formula(step.detail);
   });
 
-  logger.result(`X = ${formatVec(X)}`);
+  logger.result(`$$X = \\begin{bmatrix} ${X.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
   logger.success("Giải hệ AX = B hoàn tất.");
 }

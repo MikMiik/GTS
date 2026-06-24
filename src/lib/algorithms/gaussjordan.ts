@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 export function runGaussJordan(params: Record<string, string>, logger: Logger): void {
   const { matA, matB } = params;
@@ -20,11 +21,13 @@ export function runGaussJordan(params: Record<string, string>, logger: Logger): 
 }
 
 function parseMatrix(text: string): number[][] {
-  const lines=text.trim().split("\n").filter(l=>l.trim()!=="");
-  return lines.map((line,i)=>{
-    const vals=line.trim().split(/[\s,;]+/).map(v=>{
-      const n=parseFloat(v);
-      if(isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i+1}`);
+  const lines = text.trim().split("\n").filter((l) => l.trim() !== "");
+  if (lines.length === 0) throw new Error("Ma trận rỗng");
+  return lines.map((line, i) => {
+    const normalizedLine = line.replace(/\s*\/\s*/g, '/');
+    const vals = normalizedLine.trim().split(/[\s,;]+/).map((v) => {
+      const n = parseFraction(v);
+      if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
       return n;
     });
     return vals;
@@ -82,28 +85,29 @@ function solveGaussJordan(A:number[][],B:number[][],logger:Logger){
     if(!best){ logger.text("Toàn bộ phần chưa khử đều bằng 0 — dừng."); break; }
     const {row:pr,col:pc}=best, pivotVal=M[pr][pc];
     const tierLabels=["[số thập phân — lớn nhất]","[số nguyên — lớn nhất]","[±1 — tối ưu]"];
-    logger.step(`[Bước ${step}] Chọn pivot: a(${pr+1},${pc+1}) = ${pivotVal.toFixed(4)} ${tierLabels[best.tier]}`);
+    logger.step(`[Bước ${step}] Chọn pivot:`);
+    logger.formula(`$$a_{${pr+1},${pc+1}} = ${pivotVal.toFixed(4)} \\quad \\text{${tierLabels[best.tier]}}$$`);
     const ops:string[]=[]; let changed=false;
     for(let k=0;k<m;k++){
       if(k===pr) continue;
       if(Math.abs(M[k][pc])<1e-10) continue;
       const factor=M[k][pc]/pivotVal;
-      ops.push(`L${k+1} = L${k+1} - (${factor.toFixed(4)}) × L${pr+1}`);
+      ops.push(`L_{${k+1}} = L_{${k+1}} - (${factor.toFixed(4)}) L_{${pr+1}}`);
       for(let col=0;col<n+p;col++) M[k][col]-=factor*M[pr][col];
       M[k][pc]=0; changed=true;
     }
-    if(changed) logger.text(ops.join("\n"));
+    if(changed) logger.formula(`$$\\begin{cases} ${ops.join(" \\\\ ")} \\end{cases}$$`);
     logger.table(fmtM(M,n));
     usedRows.add(pr); usedCols.add(pc); pivotList.push({row:pr,col:pc}); step++;
   }
   logger.section("CHUẨN HÓA ĐƯỜNG CHÉO (CHIA PIVOT = 1)");
   for(let r=0;r<m;r++){
     if(usedRows.has(r)) continue;
-    for(let k=0;k<p;k++) if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho 0 = ${M[r][n+k].toFixed(4)}`); return null; }
+    for(let k=0;k<p;k++) if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho $$0 = ${M[r][n+k].toFixed(4)}$$`); return null; }
   }
   const freeCols:number[]=[];
   for(let c=0;c<n;c++) if(!usedCols.has(c)) freeCols.push(c);
-  if(freeCols.length>0){ logger.warn(`Phát hiện ${freeCols.length} biến tự do:`); freeCols.forEach((fc,idx)=>logger.info(`  Đặt x${fc+1} = t${idx+1} (∈ ℝ)`)); }
+  if(freeCols.length>0){ logger.warn(`Phát hiện ${freeCols.length} biến tự do:`); freeCols.forEach((fc,idx)=>logger.formula(`$$x_{${fc+1}} = t_{${idx+1}} \\in \\mathbb{R}$$`)); }
   const Mnorm=M.map(row=>[...row]);
   for(const {row:r,col:c} of pivotList){ const d=Mnorm[r][c]; for(let col=0;col<n+p;col++) Mnorm[r][col]/=d; }
   logger.table(fmtM(Mnorm,n));

@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 export function runLapDon(params: Record<string, string>, logger: Logger): void {
   const { phiStr, x0: x0In, q: qIn, epsilon } = params;
@@ -10,7 +11,7 @@ export function runLapDon(params: Record<string, string>, logger: Logger): void 
     logger.error("Lỗi cú pháp hàm φ(x): " + (e as Error).message);
     return;
   }
-  const x0=parseFloat(x0In), q=parseFloat(qIn), eps=parseFloat(epsilon);
+  const x0=parseFraction(x0In), q=parseFraction(qIn), eps=parseFraction(epsilon);
   if([x0,q,eps].some(isNaN)){ logger.error("Tham số không hợp lệ."); return; }
   if(q>=1 || q<=0){ logger.error("Hệ số co q phải nằm trong khoảng (0, 1)."); return; }
   if(eps<=0){ logger.error("Epsilon phải là số dương."); return; }
@@ -39,12 +40,12 @@ function fixedPoint1D(phi: (x: number) => number, x0: number, q: number, epsilon
   const { tableDecimals, reliableDigits } = prec(epsilon);
 
   logger.section("THÔNG TIN KHỞI ĐẦU");
-  logger.info(`x₀ = ${x0}`);
-  logger.info(`q = ${q} (hệ số co)`);
-  logger.info(`ε = ${epsilon.toExponential(4)}`);
-  logger.info(`ε₀ = ((1-q)/q)·ε = ${eps0.toExponential(4)} (ngưỡng dừng)`);
-  logger.formula("Công thức: xₙ₊₁ = φ(xₙ)");
-  logger.text("Điều kiện dừng: |xₙ - xₙ₋₁| < ε₀");
+  logger.info(`$$x_0 = ${x0}$$`);
+  logger.info(`$$q = ${q}$$ (hệ số co)`);
+  logger.info(`$$\\varepsilon = ${epsilon.toExponential(4)}$$`);
+  logger.info(`$$\\varepsilon_0 = \\frac{1-q}{q}\\varepsilon = ${eps0.toExponential(4)}$$ (ngưỡng dừng)`);
+  logger.formula("Công thức: $$x_{n+1} = \\varphi(x_n)$$");
+  logger.formula("Điều kiện dừng: $$|x_n - x_{n-1}| < \\varepsilon_0$$");
 
   let x_prev=x0, x_curr=x0, n=0, diff=0;
   const tableData: Record<string,unknown>[] = [];
@@ -63,11 +64,11 @@ function fixedPoint1D(phi: (x: number) => number, x0: number, q: number, epsilon
 
   logger.table(tableData);
   logger.separator();
-  logger.text(`Ngưỡng dừng ε₀ = ${eps0.toExponential(4)}`);
+  logger.text(`Ngưỡng dừng $$\\varepsilon_0 = ${eps0.toExponential(4)}$$`);
 
   if(diff<eps0){
     logger.success(`✔ Thỏa mãn điều kiện dừng tại bước n = ${n}.`);
-    logger.result(`Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): x ≈ ${rnd(x_curr,reliableDigits)}`);
+    logger.result(`Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x \\approx ${rnd(x_curr,reliableDigits)}$$`);
   } else {
     logger.warn(`⚠ Thuật toán không hội tụ sau ${maxIter} vòng lặp.`);
   }

@@ -1,8 +1,9 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 type NumMatrix = number[][];
 
-type CaseType = "TH1" | "TH2" | "TH3";
+export type CaseType = "TH1" | "TH2" | "TH3";
 
 interface IterRecord {
   k: number;
@@ -21,7 +22,7 @@ const RATIO_TOL = 1e-10;
 // Số phức tối giản — dùng cho TH3
 // ---------------------------------------------------------------------------
 
-class Complex {
+export class Complex {
   constructor(
     public re: number,
     public im: number = 0,
@@ -58,10 +59,12 @@ function pickDominantRoot(r1: Complex, r2: Complex): Complex {
 // ---------------------------------------------------------------------------
 
 function parseMatrix(text: string): NumMatrix {
-  const lines = text.trim().split("\n").filter((l) => l.trim() !== "");
+  const lines = text.trim().split("\n").filter(l => l.trim() !== "");
+  if (lines.length === 0) throw new Error("Ma trận rỗng");
   return lines.map((line, i) => {
-    const vals = line.trim().split(/[\s,;]+/).map((v) => {
-      const n = parseFloat(v);
+    const normalizedLine = line.replace(/\s*\/\s*/g, '/');
+    const vals = normalizedLine.trim().split(/[\s,;]+/).map(v => {
+      const n = parseFraction(v);
       if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
       return n;
     });
@@ -70,11 +73,13 @@ function parseMatrix(text: string): NumMatrix {
 }
 
 function parseVector(text: string): number[] {
-  const trimmed = text.trim();
-  if (!trimmed) throw new Error("Vector x₀ không được rỗng");
-  return trimmed.split(/[\s,;]+/).map((v) => {
-    const n = parseFloat(v);
-    if (isNaN(n)) throw new Error(`Giá trị "${v}" không hợp lệ`);
+  const normalizedText = text.replace(/\s*\/\s*/g, '/');
+  const trimmed = normalizedText.trim();
+  if (!trimmed) throw new Error("Vector rỗng");
+  const parts = trimmed.split(/[\s,;]+/);
+  return parts.map(v => {
+    const n = parseFraction(v);
+    if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}"`);
     return n;
   });
 }
@@ -83,17 +88,17 @@ function parseVector(text: string): number[] {
 // Định dạng
 // ---------------------------------------------------------------------------
 
-function fmt(v: number, d = TABLE_DECIMALS): string {
+export function fmt(v: number, d = TABLE_DECIMALS): string {
   if (!Number.isFinite(v)) return String(v);
   if (Math.abs(v) < 1e-15) return "0";
   return v.toFixed(d);
 }
 
-function formatVec(vec: number[]): string {
+export function formatVec(vec: number[]): string {
   return `[${vec.map((v) => fmt(v)).join(", ")}]`;
 }
 
-function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
+export function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
   const cols = m[0]?.length ?? 0;
   return m.map((row, i) => {
     const obj: Record<string, string> = { hàng: String(i + 1) };
@@ -110,7 +115,7 @@ function matVecMul(A: NumMatrix, x: number[]): number[] {
   return A.map((row) => row.reduce((sum, aij, j) => sum + aij * x[j], 0));
 }
 
-function infNorm(v: number[]): number {
+export function infNorm(v: number[]): number {
   return Math.max(...v.map((x) => Math.abs(x)));
 }
 
@@ -225,7 +230,7 @@ function detectCaseTH3(history: IterRecord[]): boolean {
 // Vòng lặp chính
 // ---------------------------------------------------------------------------
 
-function powerIteration(
+export function powerIteration(
   A: NumMatrix,
   x0: number[],
   epsilon: number,
@@ -269,14 +274,14 @@ function powerIteration(
       logger.step(
         "Nhận diện TH2: λ ước lượng xen kẽ dấu, |λ_k| ≈ |λ_{k-1}| → chuyển sang công thức bước chẵn.",
       );
-      logger.formula("λ₁² ≈ (A^{2n+2}x)_i / (A^{2n}x)_i");
+      logger.formula("$$\\lambda_1^2 \\approx \\frac{(A^{2n+2}x)_i}{(A^{2n}x)_i}$$");
     } else if (caseType === "TH1" && k >= 6 && detectCaseTH3(history)) {
       caseType = "TH3";
       logger.step(
         "Nhận diện TH3: λ không hội tụ về số thực → dùng phương trình đặc trưng bậc 2.",
       );
       logger.formula(
-        "(A^{n+2}x)_i − p(A^{n+1}x)_i + q(A^n x)_i = 0  →  λ² − pλ + q = 0",
+        "$$(A^{n+2}x)_i - p(A^{n+1}x)_i + q(A^n x)_i = 0 \\implies \\lambda^2 - p\\lambda + q = 0$$",
       );
     }
 
@@ -395,7 +400,7 @@ export function runPowerEigen(params: Record<string, string>, logger: Logger): v
     return;
   }
 
-  const eps = parseFloat(epsilon);
+  const eps = parseFraction(epsilon);
   const maxIter = parseInt(maxIterStr, 10);
 
   if (A.length === 0) {
@@ -428,14 +433,14 @@ export function runPowerEigen(params: Record<string, string>, logger: Logger): v
   logger.info(`Kích thước: ${n} × ${n}`);
   logger.text("Ma trận A:");
   logger.table(formatMatrixForLog(A));
-  logger.info(`x⁽⁰⁾ = ${formatVec(x0)}`);
-  logger.info(`ε = ${eps}, N = ${maxIter}`);
+  logger.info(`$$x^{(0)} = \\begin{bmatrix} ${x0.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
+  logger.info(`$$\\varepsilon = ${eps}, N = ${maxIter}$$`);
 
   logger.section("Ý TƯỞNG PHƯƠNG PHÁP");
-  logger.formula("A^k x = a₁λ₁^k v₁ + a₂λ₂^k v₂ + … + aₛλₛ^k vₛ");
-  logger.formula("TH1 (|λ₁| > |λ₂|):  λ₁ ≈ (A^{k+1}x)_i / (A^k x)_i");
-  logger.formula("TH2 (λ₁ = −λ₂):      λ₁² ≈ (A^{2n+2}x)_i / (A^{2n}x)_i");
-  logger.formula("TH3 (λ₁ = λ̄₂):       λ² − pλ + q = 0 từ 3 bước liên tiếp");
+  logger.formula("$$A^k x = a_1 \\lambda_1^k v_1 + a_2 \\lambda_2^k v_2 + \\dots + a_s \\lambda_s^k v_s$$");
+  logger.formula("TH1 ($|\\lambda_1| > |\\lambda_2|$): $$\\lambda_1 \\approx \\frac{(A^{k+1}x)_i}{(A^k x)_i}$$");
+  logger.formula("TH2 ($\\lambda_1 = -\\lambda_2$): $$\\lambda_1^2 \\approx \\frac{(A^{2n+2}x)_i}{(A^{2n}x)_i}$$");
+  logger.formula("TH3 ($\\lambda_1 = \\bar{\\lambda}_2$): $$\\lambda^2 - p\\lambda + q = 0$$ từ 3 bước liên tiếp");
   logger.text("Tỷ số tính trước khi chuẩn hóa vector (‖·‖∞) để tránh tràn số.");
 
   logger.section("QUÁ TRÌNH LẶP");
@@ -449,7 +454,7 @@ export function runPowerEigen(params: Record<string, string>, logger: Logger): v
   );
 
   logger.separator();
-  logger.text(`Ngưỡng dừng ε = ${eps}`);
+  logger.text(`Ngưỡng dừng $$\\varepsilon = ${eps}$$`);
 
   logger.section("KẾT QUẢ");
 
@@ -457,19 +462,19 @@ export function runPowerEigen(params: Record<string, string>, logger: Logger): v
     logger.success(`✔ Hội tụ tại bước k = ${k} (${caseType}).`);
 
     if (lambda instanceof Complex) {
-      logger.result(`Giá trị riêng trội: λ₁ ≈ ${lambda.toString()}`);
+      logger.result(`Giá trị riêng trội: $$\\lambda_1 \\approx ${lambda.toString()}$$`);
       logger.info(`|λ₁| ≈ ${fmt(lambda.abs())}`);
-      logger.result(`Vector riêng (xấp xỉ, đã chuẩn hóa): v₁ ≈ ${formatVec(eigenvector)}`);
+      logger.result(`Vector riêng (xấp xỉ, đã chuẩn hóa): $$v_1 \\approx \\begin{bmatrix} ${eigenvector.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
     } else {
-      logger.result(`Giá trị riêng trội: λ₁ ≈ ${fmt(lambda)}`);
-      logger.result(`Vector riêng (xấp xỉ, đã chuẩn hóa): v₁ ≈ ${formatVec(eigenvector)}`);
+      logger.result(`Giá trị riêng trội: $$\\lambda_1 \\approx ${fmt(lambda)}$$`);
+      logger.result(`Vector riêng (xấp xỉ, đã chuẩn hóa): $$v_1 \\approx \\begin{bmatrix} ${eigenvector.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
     }
   } else if (lambda !== null) {
     logger.warn(`⚠ Chưa đạt ε sau ${maxIter} bước lặp — kết quả xấp xỉ cuối (${caseType}).`);
     if (lambda instanceof Complex) {
-      logger.result(`λ₁ ≈ ${lambda.toString()} (|λ₁| ≈ ${fmt(lambda.abs())})`);
+      logger.result(`$$\\lambda_1 \\approx ${lambda.toString()} \\quad (|\\lambda_1| \\approx ${fmt(lambda.abs())})$$`);
     } else {
-      logger.result(`λ₁ ≈ ${fmt(lambda)}`);
+      logger.result(`$$\\lambda_1 \\approx ${fmt(lambda)}$$`);
     }
     logger.text(`Vector: ${formatVec(eigenvector)}`);
   } else {

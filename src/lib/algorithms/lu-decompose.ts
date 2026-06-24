@@ -45,9 +45,9 @@ export function runLuDecompose(params: Record<string, string>, logger: Logger): 
   const maxErr = verifyProduct(L, U, A);
   if (maxErr < 1e-6) {
     logger.success(`Xác minh A = LU: sai số tối đa = ${fmt(maxErr, 6)}`);
-    logger.result(`Phân tách thành công: A = LU`);
+    logger.result(`Phân tách thành công: $A = LU$`);
   } else {
     logger.warn(`Xác minh A = LU: sai số tối đa = ${fmt(maxErr, 6)} (có thể do làm tròn)`);
-    logger.result(`L và U đã tính (kiểm tra lại nếu sai số lớn)`);
+    logger.result(`$L$ và $U$ đã tính (kiểm tra lại nếu sai số lớn)`);
   }
 }

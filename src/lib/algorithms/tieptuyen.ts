@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 export function runTiepTuyen(
   params: Record<string, string>,
@@ -30,10 +31,10 @@ export function runTiepTuyen(
     return;
   }
 
-  const a = parseFloat(aIn);
-  const b = parseFloat(bIn);
-  const m1 = parseFloat(m1In);
-  const eps = parseFloat(epsilon);
+  const a = parseFraction(aIn);
+  const b = parseFraction(bIn);
+  const m1 = parseFraction(m1In);
+  const eps = parseFraction(epsilon);
 
   if ([a, b, m1, eps].some(isNaN)) {
     logger.error("Tham số không hợp lệ.");
@@ -91,7 +92,7 @@ function newtonMethod(
   logger: Logger,
 ) {
   logger.section("CHỌN ĐIỂM BẮT ĐẦU (ĐIỂM FOURIER)");
-  logger.text("Chọn x₀ sao cho f(x₀)·f''(x₀) > 0");
+  logger.text("Chọn $x_0$ sao cho $f(x_0) \\cdot f''(x_0) > 0$");
 
   let x_curr: number;
   const fa = f(a),
@@ -100,20 +101,20 @@ function newtonMethod(
     ddfb = ddf(b);
 
   logger.info(
-    `f(a)=${fa.toFixed(6)}, f''(a)=${ddfa.toFixed(6)}, tích = ${(fa * ddfa).toFixed(6)}`,
+    `$$f(a)=${fa.toFixed(6)}, f''(a)=${ddfa.toFixed(6)}, f(a) \\cdot f''(a) = ${(fa * ddfa).toFixed(6)}$$`,
   );
   logger.info(
-    `f(b)=${fb.toFixed(6)}, f''(b)=${ddfb.toFixed(6)}, tích = ${(fb * ddfb).toFixed(6)}`,
+    `$$f(b)=${fb.toFixed(6)}, f''(b)=${ddfb.toFixed(6)}, f(b) \\cdot f''(b) = ${(fb * ddfb).toFixed(6)}$$`,
   );
 
   if (f(a) * ddf(a) > 0) {
     x_curr = a;
-    logger.success(`Chọn x₀ = a = ${a} (f(a)·f''(a) > 0)`);
+    logger.success(`Chọn $$x_0 = a = ${a}$$ vì $$f(a) \\cdot f''(a) > 0$$`);
   } else if (f(b) * ddf(b) > 0) {
     x_curr = b;
-    logger.success(`Chọn x₀ = b = ${b} (f(b)·f''(b) > 0)`);
+    logger.success(`Chọn $$x_0 = b = ${b}$$ vì $$f(b) \\cdot f''(b) > 0$$`);
   } else {
-    logger.warn("Không tìm thấy điểm Fourier lý tưởng, mặc định x₀ = b.");
+    logger.warn("Không tìm thấy điểm Fourier lý tưởng, mặc định $x_0 = b$.");
     x_curr = b;
   }
 
@@ -132,9 +133,9 @@ function newtonMethod(
   });
 
   logger.section("QUÁ TRÌNH LẶP");
-  logger.formula("Công thức: xₙ₊₁ = xₙ - f(xₙ) / f'(xₙ)");
-  logger.text(
-    `Điều kiện dừng: |f(xₙ)| / m₁ ≤ ε = ${epsilon.toExponential(4)}`,
+  logger.formula(`Công thức: $$x_{n+1} = x_n - \\frac{f(x_n)}{f'(x_n)}$$`);
+  logger.formula(
+    `Điều kiện dừng: $$\\frac{|f(x_n)|}{m_1} \\le \\varepsilon = ${epsilon.toExponential(4)}$$`,
   );
 
   while (n < maxIter) {
@@ -142,7 +143,7 @@ function newtonMethod(
     n++;
     const deriv = df(x_curr);
     if (Math.abs(deriv) < 1e-15) {
-      logger.error("Đạo hàm f'(xₙ) = 0, không thể tiếp tục.");
+      logger.error("Đạo hàm $$f'(x_n) = 0$$, không thể tiếp tục.");
       return;
     }
     x_curr = x_curr - fx / deriv;
@@ -160,14 +161,14 @@ function newtonMethod(
   logger.table(tableData);
   logger.separator();
   logger.text(
-    `m₁ = ${m1}, ngưỡng dừng |f| ≤ m₁·ε = ${(m1 * epsilon).toExponential(4)}`,
+    `$$m_1 = ${m1}$$, ngưỡng dừng $$|f(x)| \\le m_1 \\cdot \\varepsilon = ${(m1 * epsilon).toExponential(4)}$$`,
   );
 
   if (errorEstimate <= epsilon) {
     logger.success(`✔ Hội tụ sau ${n} bước lặp.`);
     const xReliable = roundBySignificantDigits(x_curr, reliableDigits);
     logger.result(
-      `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): x ≈ ${xReliable}`,
+      `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x \\approx ${xReliable}$$`,
     );
   } else {
     logger.warn(`⚠ Không đạt sai số sau ${maxIter} vòng lặp.`);

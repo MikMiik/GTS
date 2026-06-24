@@ -54,11 +54,11 @@ export function runCholeskyDecompose(
   const maxErr = verifyCholeskyProduct(L, A);
   if (maxErr < 1e-6) {
     logger.success(`Xác minh A = LL^T: sai số tối đa = ${fmt(maxErr, 6)}`);
-    logger.result("Phân tách thành công: A = LL^T");
+    logger.result("Phân tách thành công: $$A = LL^T$$");
   } else {
     logger.warn(
       `Xác minh A = LL^T: sai số tối đa = ${fmt(maxErr, 6)} (có thể do làm tròn)`,
     );
-    logger.result("L đã tính (kiểm tra lại nếu sai số lớn)");
+    logger.result("$$L$$ đã tính (kiểm tra lại nếu sai số lớn)");
   }
 }

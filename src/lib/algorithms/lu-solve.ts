@@ -3,7 +3,6 @@ import {
   backSub,
   fmt,
   formatMatrixForLog,
-  formatVec,
   forwardSub,
   logLuDecomposition,
   parseMatrix,
@@ -11,7 +10,10 @@ import {
   validateSquareMatrix,
 } from "@/lib/algorithms/lu-core";
 
-export function runLuSolve(params: Record<string, string>, logger: Logger): void {
+export function runLuSolve(
+  params: Record<string, string>,
+  logger: Logger,
+): void {
   const { matA, vecB } = params;
 
   let A: number[][];
@@ -40,7 +42,9 @@ export function runLuSolve(params: Record<string, string>, logger: Logger): void
   logger.info(`Kích thước A: ${n} × ${n}`);
   logger.text("Ma trận A:");
   logger.table(formatMatrixForLog(A));
-  logger.text(`Vector B = ${formatVec(B)}`);
+  logger.text(
+    `Vector $$B = \\begin{bmatrix} ${B.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
 
   const factor = logLuDecomposition(A, logger, "BƯỚC 1 (B1): PHÂN TÁCH A = LU");
   if (!factor) return;
@@ -54,23 +58,31 @@ export function runLuSolve(params: Record<string, string>, logger: Logger): void
   logger.table(formatMatrixForLog(U));
 
   logger.section("BƯỚC 2 (B2): GIẢI LY = B");
-  logger.formula("y_1 = b_1 / l_{11}");
-  logger.formula("y_i = (b_i − Σ_{j=1}^{i−1} l_ij y_j) / l_ii  (i = 2…n)");
+  logger.formula("$$y_1 = \\frac{b_1}{l_{11}}$$");
+  logger.formula(
+    "$$y_i = \\frac{b_i - \\sum_{j=1}^{i-1} l_{ij} y_j}{l_{ii}} \\quad (i = 2 \\dots n)$$",
+  );
 
   const Y = forwardSub(L, B, (step) => {
-    logger.info(step.detail);
+    logger.formula(step.detail);
   });
 
-  logger.result(`Y = ${formatVec(Y)}`);
+  logger.result(
+    `$$Y = \\begin{bmatrix} ${Y.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
 
   logger.section("BƯỚC 3 (B3): GIẢI UX = Y");
-  logger.formula("x_n = y_n");
-  logger.formula("x_i = y_i − Σ_{j=i+1}^n u_ij x_j  (i = n−1…1)");
+  logger.formula("$$x_n = y_n$$");
+  logger.formula(
+    "$$x_i = y_i - \\sum_{j=i+1}^n u_{ij} x_j \\quad (i = n-1 \\dots 1)$$",
+  );
 
   const X = backSub(U, Y, (step) => {
-    logger.info(step.detail);
+    logger.formula(step.detail);
   });
 
-  logger.result(`X = ${formatVec(X)}`);
+  logger.result(
+    `$$X = \\begin{bmatrix} ${X.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
   logger.success("Giải hệ AX = B hoàn tất.");
 }

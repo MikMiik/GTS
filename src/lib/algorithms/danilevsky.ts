@@ -1,6 +1,7 @@
 import { matrix, multiply, identity } from "mathjs";
 import type { Matrix } from "mathjs";
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 const EPS = 1e-10;
 
@@ -96,13 +97,12 @@ function createIdentity(size: number): NumMatrix {
 // ---------------------------------------------------------------------------
 
 function parseMatrix(text: string): NumMatrix {
-  const lines = text
-    .trim()
-    .split("\n")
-    .filter((line) => line.trim() !== "");
+  const lines = text.trim().split("\n").filter((l) => l.trim() !== "");
+  if (lines.length === 0) throw new Error("Ma trận không được rỗng");
   return lines.map((line, i) => {
-    const vals = line.trim().split(/[\s,;]+/).map((v) => {
-      const n = parseFloat(v);
+    const normalizedLine = line.replace(/\s*\/\s*/g, '/');
+    const vals = normalizedLine.trim().split(/[\s,;]+/).map((v) => {
+      const n = parseFraction(v);
       if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
       return n;
     });
@@ -422,7 +422,7 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
     logger.separator();
     logger.step(`Bước 2 — Vòng lặp lần ${loopCount} (k = ${k})`);
     logger.info(
-      `Xét hàng ${k}, phần tử sát đường chéo a_{${k},${k - 1}} = ${formatNum(pivot)}.`,
+      `Xét hàng ${k}, phần tử sát đường chéo $$a_{${k},${k - 1}} = ${formatNum(pivot)}$$.`,
     );
 
     if (Math.abs(pivot) < EPS) {
@@ -437,7 +437,7 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
       if (swapCol !== -1) {
         // TH1
         logger.info(
-          `Trường hợp 1: a_{${k},${k - 1}} = 0 và tồn tại a_{${k},${swapCol + 1}} ≠ 0.`,
+          `Trường hợp 1: $$a_{${k},${k - 1}} = 0$$ và tồn tại $$a_{${k},${swapCol + 1}} \\neq 0$$.`,
         );
         logger.step(
           `[Hàng ${rowIndex + 1}] a(${rowIndex + 1},${rowIndex}) = 0 nhưng có a(${rowIndex + 1},${swapCol + 1}) ≠ 0. TH1: Hoán vị.`,
@@ -471,22 +471,22 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
       // TH3
       const eigenvalue = matrixA[rowIndex][rowIndex];
       logger.info(
-        `Trường hợp 3: a_{${k},j} = 0 với mọi j ≤ ${k - 1} — hàng ${k} đã đạt dạng Frobenius cấp 1.`,
+        `Trường hợp 3: $$a_{${k},j} = 0$$ với mọi $$j \\le ${k - 1}$$ — hàng ${k} đã đạt dạng Frobenius cấp 1.`,
       );
       logger.step(
         `[Hàng ${rowIndex + 1}] Toàn bộ phần tử bên trái đường chéo đều bằng 0. TH3: Giảm bậc khối.`,
       );
       logger.formula(
-        `A phân rã: A_${k} = [ A_{${k - 1}} | □ ; 0 | a_{${k}${k}} ]`,
+        `A phân rã: $$A_{${k}} = \\begin{bmatrix} A_{${k - 1}} & \\square \\\\ 0 & a_{${k}${k}} \\end{bmatrix}$$`,
       );
       logger.info(
         `Bóc tách trị riêng độc lập: λ = a_{${k},${k}} = ${formatNum(eigenvalue)}.`,
       );
       logger.formula(
-        `Cập nhật đa thức tích lũy: P_out(λ) ← P_out(λ) · (${formatNum(eigenvalue)} - λ)`,
+        `Cập nhật đa thức tích lũy: $$P_{out}(\\lambda) \\leftarrow P_{out}(\\lambda) \\cdot (${formatNum(eigenvalue)} - \\lambda)$$`,
       );
       logger.formula(
-        `Đa thức tích lũy có thêm nhân tử: (${eigenvalue.toFixed(4)} - λ)`,
+        `Đa thức tích lũy có thêm nhân tử: $$(${eigenvalue.toFixed(4)} - \\lambda)$$`,
       );
 
       accumulatedPoly = multiplyPolynomials(accumulatedPoly, [-1, eigenvalue]);
@@ -575,9 +575,9 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
       .slice(1)
       .map((p, i) => `p_${i + 1} = ${formatNum(p)}`)
       .join(", ");
-    logger.formula(`Suy ra: ${pList}`);
+    logger.formula(`Suy ra: $$${pList}$$`);
     logger.formula(
-      `P_F(λ) = ${formatCharacteristicPolynomial(frobeniusPoly, activeSize)}`,
+      `$$P_F(\\lambda) = ${formatCharacteristicPolynomial(frobeniusPoly, activeSize)}$$`,
     );
   }
 
@@ -586,7 +586,7 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
       .map((s) => `(${formatNum(s.eigenvalue)} - λ)`)
       .join(" · ");
     logger.info(`P_out(λ) = ${factors}`);
-    logger.formula(`P(λ) = P_out(λ) · P_F(λ)`);
+    logger.formula(`$$P(\\lambda) = P_{out}(\\lambda) \\cdot P_F(\\lambda)$$`);
   }
 
   const polyStr = formatCharacteristicPolynomial(characteristicPoly, n);
@@ -594,7 +594,7 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
   const polySuffix = n % 2 === 0 ? "" : ")";
 
   logger.result(
-    `Đa thức đặc trưng: P(λ) = ${polyWrapper}${polyStr.replace(/^-/, "")}${polySuffix} = 0`,
+    `Đa thức đặc trưng: $$P(\\lambda) = ${polyWrapper}${polyStr.replace(/^-/, "")}${polySuffix} = 0$$`,
   );
 
   logger.separator();
@@ -602,7 +602,7 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
   logger.info(
     "P là ma trận tích lũy các phép biến đổi đồng dạng (hoán vị C, khử M⁻¹) trong quá trình Danilevsky.",
   );
-  logger.formula(`P = ${pFactorHistory.join(" · ")}`);
+  logger.formula(`$$P = ${pFactorHistory.join(" \\cdot ")}$$`);
   logger.info(
     "Quan hệ: A ∼ F (đồng dạng). Vector riêng chuẩn u trong hệ Frobenius được đưa về hệ gốc bằng v = P · u.",
   );
@@ -631,7 +631,7 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
   logger.info(
     "Vector riêng chuẩn trong hệ tọa độ Frobenius: u = [λ^{m-1}, ..., λ, 1]ᵀ (TH3: e_k).",
   );
-  logger.formula("Áp dụng ma trận P ở trên: v = P · u");
+  logger.formula("Áp dụng ma trận $P$ ở trên: $$v = P \\cdot u$$");
   allRoots.forEach((root, idx) => {
     const standardVector = buildStandardEigenvector(
       n,

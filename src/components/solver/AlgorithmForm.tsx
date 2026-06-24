@@ -83,6 +83,8 @@ function FormFields({ method, onKeyDown }: FieldProps & { method: AlgorithmKey }
     case "danilevsky": return <DanilevskyFields />;
     case "power-eigen":
       return <PowerEigenFields onKeyDown={onKeyDown} />;
+    case "xuong-thang":
+      return <XuongThangFields onKeyDown={onKeyDown} />;
     default: return null;
   }
 }
@@ -464,6 +466,56 @@ function LuSolveFields() {
       <div className="form-group">
         <label className="form-label" htmlFor="in-vecB">Vector B (mỗi dòng 1 giá trị)</label>
         <textarea className="form-textarea" id="in-vecB" name="vecB" rows={4} spellCheck={false} />
+      </div>
+    </>
+  );
+}
+
+function XuongThangFields({ onKeyDown }: FieldProps) {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông A, giá trị riêng lớn nhất λ₁ và véc-tơ riêng v₁ tương ứng.<br />
+        Chọn cách giải bằng Select box bên dưới.
+      </div>
+      <div className="form-section-title">Phương pháp giải</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-method">Chọn Cách Giải</label>
+        <select className="form-input" id="in-method" name="method">
+          <option value="C1">Cách 1: Sử dụng Véc-tơ riêng trái (w₁)</option>
+          <option value="C2">Cách 2: Sử dụng Ma trận khử (Θ)</option>
+        </select>
+      </div>
+      <div className="form-section-title">Đầu vào Ma trận & Véc-tơ</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận A (n × n)</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={4} spellCheck={false} />
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-lambda1">Giá trị riêng λ₁</label>
+          <input className="form-input" id="in-lambda1" name="lambda1Str" type="text" spellCheck={false} onKeyDown={onKeyDown} />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-vecV1">Véc-tơ riêng v₁</label>
+          <input className="form-input" id="in-vecV1" name="vecV1" type="text" spellCheck={false} onKeyDown={onKeyDown} />
+        </div>
+      </div>
+      <div className="form-section-title">Tham số Lũy thừa</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-vecY0">Véc-tơ lặp y₀</label>
+        <input className="form-input" id="in-vecY0" name="vecY0" type="text" spellCheck={false} onKeyDown={onKeyDown} />
+        <div className="form-hint">Ví dụ: <code>1 1</code> (Mặc định toàn số 1)</div>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-eps">Sai số <code>ε</code></label>
+          <input className="form-input" id="in-eps" name="epsilon" type="text" onKeyDown={onKeyDown} />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-maxIter">Số lặp tối đa <code>N</code></label>
+          <input className="form-input" id="in-maxIter" name="maxIter" type="number" min="1" step="1" onKeyDown={onKeyDown} />
+        </div>
       </div>
     </>
   );

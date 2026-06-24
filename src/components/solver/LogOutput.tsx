@@ -1,6 +1,10 @@
 "use client";
 
 import { type LogEntry } from "@/types/solver";
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 interface LogOutputProps {
   entries: LogEntry[];
@@ -92,20 +96,26 @@ export default function LogOutput({ entries }: LogOutputProps) {
           result: "log-result",
         };
 
+        const className = `log-entry ${classMap[entry.type] || "log-text"}`;
         return (
           <div
             key={idx}
-            className={`log-entry ${classMap[entry.type] || "log-text"}`}
+            className={className}
             style={{
               animationDelay: delay,
               whiteSpace:
                 typeof entry.content === "string" &&
                 (entry.content as string).includes("\n")
-                  ? "pre"
+                  ? "pre-wrap"
                   : undefined,
             }}
           >
-            {entry.content as string}
+            <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+            >
+              {entry.content as string}
+            </ReactMarkdown>
           </div>
         );
       })}

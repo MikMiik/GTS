@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { parseFraction } from "./math-utils";
 
 export type NumMatrix = number[][];
 
@@ -13,8 +14,9 @@ export function parseMatrix(text: string): NumMatrix {
   const lines = text.trim().split("\n").filter((l) => l.trim() !== "");
   if (lines.length === 0) throw new Error("Ma trận không được rỗng");
   return lines.map((line, i) => {
-    const vals = line.trim().split(/[\s,;]+/).map((v) => {
-      const n = parseFloat(v);
+    const normalizedLine = line.replace(/\s*\/\s*/g, '/');
+    const vals = normalizedLine.trim().split(/[\s,;]+/).map((v) => {
+      const n = parseFraction(v);
       if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
       return n;
     });
@@ -23,7 +25,8 @@ export function parseMatrix(text: string): NumMatrix {
 }
 
 export function parseVector(text: string): number[] {
-  const trimmed = text.trim();
+  const normalizedText = text.replace(/\s*\/\s*/g, '/');
+  const trimmed = normalizedText.trim();
   if (!trimmed) throw new Error("Vector không được rỗng");
   if (trimmed.includes("\n")) {
     return trimmed
@@ -34,13 +37,13 @@ export function parseVector(text: string): number[] {
         if (parts.length !== 1) {
           throw new Error(`Mỗi dòng chỉ chứa 1 giá trị (lỗi ở dòng ${i + 1})`);
         }
-        const n = parseFloat(parts[0]);
+        const n = parseFraction(parts[0]);
         if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${parts[0]}" ở dòng ${i + 1}`);
         return n;
       });
   }
   return trimmed.split(/[\s,;]+/).map((v) => {
-    const n = parseFloat(v);
+    const n = parseFraction(v);
     if (isNaN(n)) throw new Error(`Giá trị "${v}" không hợp lệ`);
     return n;
   });
@@ -100,7 +103,7 @@ function sumTermsLCol(k: number, i: number, L: NumMatrix, U: NumMatrix): string 
   for (let m = 1; m <= k - 1; m++) {
     const l = fmt(L[i - 1][m - 1]);
     const u = fmt(U[m - 1][k - 1]);
-    parts.push(`${l}·${u}`);
+    parts.push(`${l} \\cdot ${u}`);
   }
   return parts.join(" + ");
 }
@@ -111,7 +114,7 @@ function sumTermsURow(k: number, j: number, L: NumMatrix, U: NumMatrix): string 
   for (let m = 1; m <= k - 1; m++) {
     const l = fmt(L[k - 1][m - 1]);
     const u = fmt(U[m - 1][j - 1]);
-    parts.push(`${l}·${u}`);
+    parts.push(`${l} \\cdot ${u}`);
   }
   return parts.join(" + ");
 }
@@ -160,10 +163,10 @@ export function decomposeLU(
 
       let detail: string;
       if (k === 1) {
-        detail = `${subscript(i, k)} = ${subscriptA(i, k)} = ${fmt(A[i - 1][k - 1])}`;
+        detail = `$$${subscript(i, k)} = ${subscriptA(i, k)} = ${fmt(A[i - 1][k - 1])}$$`;
       } else {
         const terms = sumTermsLCol(k, i, L, U);
-        detail = `${subscript(i, k)} = ${subscriptA(i, k)} − (${terms}) = ${fmt(val)}`;
+        detail = `$$${subscript(i, k)} = ${subscriptA(i, k)} - (${terms}) = ${fmt(val)}$$`;
       }
       lColumn.push({ i, value: val, detail });
     }
@@ -185,10 +188,10 @@ export function decomposeLU(
 
       let detail: string;
       if (k === 1) {
-        detail = `${subscriptU(k, j)} = ${subscriptA(k, j)}/${subscript(k, k)} = ${fmt(A[k - 1][j - 1])}/${fmt(lkk)} = ${fmt(val)}`;
+        detail = `$$${subscriptU(k, j)} = \\frac{${subscriptA(k, j)}}{${subscript(k, k)}} = \\frac{${fmt(A[k - 1][j - 1])}}{${fmt(lkk)}} = ${fmt(val)}$$`;
       } else {
         const terms = sumTermsURow(k, j, L, U);
-        detail = `${subscriptU(k, j)} = (${subscriptA(k, j)} − (${terms}))/${subscript(k, k)} = ${fmt(val)}`;
+        detail = `$$${subscriptU(k, j)} = \\frac{${subscriptA(k, j)} - (${terms})}{${subscript(k, k)}} = ${fmt(val)}$$`;
       }
       uRow.push({ j, value: val, detail });
     }
@@ -250,7 +253,7 @@ export function forwardSub(
       const term = L[i - 1][j - 1] * y[j - 1];
       sum += term;
       if (Math.abs(L[i - 1][j - 1]) > PIVOT_EPS) {
-        terms.push(`${fmt(L[i - 1][j - 1])}·y_${j}`);
+        terms.push(`${fmt(L[i - 1][j - 1])} y_{${j}}`);
       }
     }
     const val = (b[i - 1] - sum) / L[i - 1][i - 1];
@@ -258,10 +261,10 @@ export function forwardSub(
 
     let detail: string;
     if (i === 1) {
-      detail = `y_1 = b_1/l_{11} = ${fmt(b[0])}/${fmt(L[0][0])} = ${fmt(val)}`;
+      detail = `$$y_1 = \\frac{b_1}{l_{11}} = \\frac{${fmt(b[0])}}{${fmt(L[0][0])}} = ${fmt(val)}$$`;
     } else {
       const termStr = terms.length > 0 ? terms.join(" + ") : "0";
-      detail = `y_${i} = (b_${i} − (${termStr}))/l_{${i}${i}} = (${fmt(b[i - 1])} − ${fmt(sum)})/${fmt(L[i - 1][i - 1])} = ${fmt(val)}`;
+      detail = `$$y_{${i}} = \\frac{b_{${i}} - (${termStr})}{l_{${i}${i}}} = \\frac{${fmt(b[i - 1])} - ${fmt(sum)}}{${fmt(L[i - 1][i - 1])}} = ${fmt(val)}$$`;
     }
     onStep?.({ i, value: val, detail });
   }
@@ -284,7 +287,7 @@ export function backSub(
       const term = U[i - 1][j - 1] * x[j - 1];
       sum += term;
       if (Math.abs(U[i - 1][j - 1]) > PIVOT_EPS) {
-        terms.push(`${fmt(U[i - 1][j - 1])}·x_${j}`);
+        terms.push(`${fmt(U[i - 1][j - 1])} x_{${j}}`);
       }
     }
     const val = y[i - 1] - sum;
@@ -292,10 +295,10 @@ export function backSub(
 
     let detail: string;
     if (i === n) {
-      detail = `x_${n} = y_${n} = ${fmt(val)}`;
+      detail = `$$x_{${n}} = y_{${n}} = ${fmt(val)}$$`;
     } else {
       const termStr = terms.length > 0 ? terms.join(" + ") : "0";
-      detail = `x_${i} = y_${i} − (${termStr}) = ${fmt(y[i - 1])} − ${fmt(sum)} = ${fmt(val)}`;
+      detail = `$$x_{${i}} = y_{${i}} - (${termStr}) = ${fmt(y[i - 1])} - ${fmt(sum)} = ${fmt(val)}$$`;
     }
     onStep?.({ i, value: val, detail });
   }
@@ -318,36 +321,36 @@ export function logLuDecomposition(
   const verbose = n <= VERBOSE_THRESHOLD;
 
   logger.section(sectionTitle);
-  logger.info(`Khởi tạo: U có u_ii = 1; L có l_ij = 0 khi i < j.`);
+  logger.info(`Khởi tạo: $U$ có $u_{ii} = 1$; $L$ có $l_{ij} = 0$ khi $i < j$.`);
 
   try {
     const { L, U } = decomposeLU(A, (step) => {
       logger.step(`k = ${step.k}`);
       logger.formula(
-        `Cột ${step.k} của L: l_ik = a_ik − Σ_{m=1}^{k−1} l_im u_mk  (i = ${step.k}…${n})`,
+        `$$\\text{Cột } ${step.k} \\text{ của } L: l_{ik} = a_{ik} - \\sum_{m=1}^{k-1} l_{im} u_{mk} \\quad (i = ${step.k} \\dots ${n})$$`,
       );
       if (verbose) {
         for (const entry of step.lColumn) {
-          logger.info(`  ${entry.detail}`);
+          logger.formula(`  ${entry.detail}`);
         }
       } else {
-        const vals = step.lColumn.map((e) => `l_${e.i}${step.k}=${fmt(e.value)}`).join(", ");
-        logger.info(`  ${vals}`);
+        const vals = step.lColumn.map((e) => `l_{${e.i}${step.k}}=${fmt(e.value)}`).join(", ");
+        logger.formula(`  $$${vals}$$`);
       }
 
       if (step.k < n) {
         logger.formula(
-          `Dòng ${step.k} của U: u_kj = (a_kj − Σ_{m=1}^{k−1} l_km u_mj) / l_{${step.k}${step.k}}  (j = ${step.k + 1}…${n})`,
+          `$$\\text{Dòng } ${step.k} \\text{ của } U: u_{kj} = \\frac{a_{kj} - \\sum_{m=1}^{k-1} l_{km} u_{mj}}{l_{${step.k}${step.k}}} \\quad (j = ${step.k + 1} \\dots ${n})$$`,
         );
         if (step.uRow.length === 0) {
           logger.info(`  (không có phần tử ngoài đường chéo)`);
         } else if (verbose) {
           for (const entry of step.uRow) {
-            logger.info(`  ${entry.detail}`);
+            logger.formula(`  ${entry.detail}`);
           }
         } else {
-          const vals = step.uRow.map((e) => `u_${step.k}${e.j}=${fmt(e.value)}`).join(", ");
-          logger.info(`  ${vals}`);
+          const vals = step.uRow.map((e) => `u_{${step.k}${e.j}}=${fmt(e.value)}`).join(", ");
+          logger.formula(`  $$${vals}$$`);
         }
       }
 

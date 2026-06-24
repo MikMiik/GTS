@@ -31,7 +31,8 @@ export type AlgorithmKey =
   | "lu-decompose"
   | "lu-solve"
   | "cholesky-decompose"
-  | "cholesky-solve";
+  | "cholesky-solve"
+  | "xuong-thang";
 
 export interface AlgoConfig {
   title: string;
@@ -78,4 +79,4 @@ export const NONLINEAR_SYSTEM_METHODS = [
   "lapdon-system",
 ] as const;
 
-export const EIGENVALUE_METHODS = ["danilevsky", "power-eigen"] as const;
+export const EIGENVALUE_METHODS = ["danilevsky", "power-eigen", "xuong-thang"] as const;
