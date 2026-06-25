@@ -14,12 +14,15 @@ import { runLuSolve } from "@/lib/algorithms/lu-solve";
 import { runCholeskyDecompose } from "@/lib/algorithms/cholesky-decompose";
 import { runCholeskySolve } from "@/lib/algorithms/cholesky-solve";
 import { runXuongThang } from "@/lib/algorithms/xuong-thang";
+import { runSvd } from "@/lib/algorithms/svd";
+import { runPseudoinverse } from "@/lib/algorithms/pseudoinverse";
+import { runConditionNumber } from "@/lib/algorithms/condition-number";
 import type { AlgoConfig, AlgorithmKey, Logger } from "@/types/solver";
 
 export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   bisection: {
     title: "Phương Pháp Chia Đôi",
-    subtitle: "Bisection Method — f(x) = 0",
+    subtitle: "Cô lập nghiệm f(x) = 0 — Bisection Method",
     icon: "⚡",
     defaultValues: {
       fStr: "Math.exp(x) - Math.cos(2*x)",
@@ -31,7 +34,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   tieptuyen: {
     title: "Phương Pháp Tiếp Tuyến",
-    subtitle: "Newton-Raphson 1D — f(x) = 0",
+    subtitle: "Hội tụ nhanh tìm nghiệm f(x) = 0 — Newton-Raphson 1D",
     icon: "∂",
     defaultValues: {
       fStr: "Math.pow(x,5) - 17",
@@ -46,7 +49,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   daycung: {
     title: "Phương Pháp Dây Cung",
-    subtitle: "Secant/Chord Method — f(x) = 0",
+    subtitle: "Tìm nghiệm bằng dây cung — Secant/Chord Method",
     icon: "⌒",
     defaultValues: {
       fStr: "x**3 - x - 2",
@@ -58,7 +61,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   lapdon: {
     title: "Lặp Đơn 1 Biến",
-    subtitle: "Fixed-Point Iteration 1D — x = φ(x)",
+    subtitle: "Lặp hội tụ theo x = φ(x) — Fixed-Point 1D",
     icon: "↺",
     defaultValues: {
       phiStr: "1 / Math.sqrt(x + 3)",
@@ -70,7 +73,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   gauss: {
     title: "Phương Pháp Gauss",
-    subtitle: "Forward Elimination + Back Substitution — Ax = B",
+    subtitle: "Giải hệ Ax = B bằng khử — Forward Elimination",
     icon: "▦",
     defaultValues: {
       matA: "1 2 1\n2 3 2\n1 1 3",
@@ -80,7 +83,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   gaussjordan: {
     title: "Phương Pháp Gauss-Jordan",
-    subtitle: "Row Reduction to RREF — Ax = B",
+    subtitle: "Khử về dạng rút gọn RREF — Gauss-Jordan",
     icon: "▣",
     defaultValues: {
       matA: "2 4 5 -6\n0 -1 0 8\n0 0 0 0\n0 0 -1.5 -4",
@@ -90,7 +93,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "gauss-seidel": {
     title: "Phương Pháp Gauss-Seidel",
-    subtitle: "Iterative Method — Ax = b",
+    subtitle: "Lặp hội tụ giải hệ Ax = b — Gauss-Seidel",
     icon: "⟲",
     defaultValues: {
       matA: "10 5 7\n2 15 3\n-3 1 30",
@@ -103,7 +106,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "newton-system": {
     title: "Newton Hệ Phi Tuyến",
-    subtitle: "Newton Method for Nonlinear Systems",
+    subtitle: "Giải hệ phi tuyến — Newton Method",
     icon: "∇",
     defaultValues: {
       x0Str: "0.1 0.1 -0.1",
@@ -114,7 +117,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "lapdon-system": {
     title: "Lặp Đơn Hệ Phi Tuyến",
-    subtitle: "Fixed-Point Iteration for Nonlinear Systems",
+    subtitle: "Lặp hội tụ giải hệ phi tuyến — Fixed-Point",
     icon: "⟳",
     defaultValues: {
       x0Str: "0 0 0",
@@ -136,7 +139,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "power-eigen": {
     title: "Phương Pháp Lũy Thừa",
-    subtitle: "Power Iteration — Giá Trị Riêng Trội",
+    subtitle: "Tìm trị riêng lớn nhất — Power Iteration",
     icon: "λ",
     defaultValues: {
       matA: "4 1\n2 3",
@@ -148,7 +151,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "lu-decompose": {
     title: "Phân Tách LU",
-    subtitle: "LU Decomposition — A = LU",
+    subtitle: "Phân tích A = LU — LU Decomposition",
     icon: "LU",
     defaultValues: {
       matA:
@@ -158,7 +161,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "lu-solve": {
     title: "Phân Tách LU Giải AX = B",
-    subtitle: "LU Factorization — Ax = b",
+    subtitle: "Giải Ax = b qua phân tích LU — LU Factorization",
     icon: "▧",
     defaultValues: {
       matA:
@@ -169,7 +172,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "cholesky-decompose": {
     title: "Phân Tách Cholesky",
-    subtitle: "Cholesky Decomposition — A = LL^T",
+    subtitle: "Phân tích A = LL^T (ma trận SPD) — Cholesky",
     icon: "L²",
     defaultValues: {
       matA:
@@ -179,7 +182,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "cholesky-solve": {
     title: "Phân Tách Cholesky Giải AX = B",
-    subtitle: "Cholesky Factorization — Ax = b",
+    subtitle: "Giải Ax = b qua Cholesky — Cholesky Factorization",
     icon: "◣",
     defaultValues: {
       matA:
@@ -190,7 +193,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
   },
   "xuong-thang": {
     title: "Phương Pháp Xuống Thang",
-    subtitle: "Deflation Method — Giá Trị Riêng Trội Thứ 2",
+    subtitle: "Tìm trị riêng lớn thứ hai trở đi — Deflation Method",
     icon: "📉",
     defaultValues: {
       matA: "4 2\n1 3",
@@ -202,6 +205,33 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
       method: "C1",
     },
     run: runXuongThang,
+  },
+  svd: {
+    title: "Phân Rã SVD",
+    subtitle: "Xác định giá trị và vector kỳ dị — SVD Decomposition",
+    icon: "\u03a3",
+    defaultValues: {
+      matA: "1 1\n0 0\n0 0",
+    },
+    run: runSvd,
+  },
+  pseudoinverse: {
+    title: "Ma Trận Nghịch Đảo Suy Rộng",
+    subtitle: "Tìm ma trận Moore-Penrose $A^\\dagger$ — Pseudoinverse",
+    icon: "\u2020",
+    defaultValues: {
+      matA: "1 1\n0 0\n0 0",
+    },
+    run: runPseudoinverse,
+  },
+  "condition-number": {
+    title: "Số Điều Kiện",
+    subtitle: "Tính mức ổn định số của ma trận — Condition Number",
+    icon: "\u03ba",
+    defaultValues: {
+      matA: "4 2\n1 3",
+    },
+    run: runConditionNumber,
   },
 };
 
@@ -225,5 +255,8 @@ export const SIDEBAR_SECTIONS = [
   },
   {
     methods: ["danilevsky", "power-eigen", "xuong-thang"] as AlgorithmKey[],
+  },
+  {
+    methods: ["svd", "pseudoinverse", "condition-number"] as AlgorithmKey[],
   },
 ] as const;

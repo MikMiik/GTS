@@ -32,7 +32,10 @@ export type AlgorithmKey =
   | "lu-solve"
   | "cholesky-decompose"
   | "cholesky-solve"
-  | "xuong-thang";
+  | "xuong-thang"
+  | "svd"
+  | "pseudoinverse"
+  | "condition-number";
 
 export interface AlgoConfig {
   title: string;
@@ -80,3 +83,5 @@ export const NONLINEAR_SYSTEM_METHODS = [
 ] as const;
 
 export const EIGENVALUE_METHODS = ["danilevsky", "power-eigen", "xuong-thang"] as const;
+
+export const SVD_METHODS = ["svd", "pseudoinverse", "condition-number"] as const;

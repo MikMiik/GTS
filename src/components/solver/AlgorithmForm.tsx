@@ -85,6 +85,10 @@ function FormFields({ method, onKeyDown }: FieldProps & { method: AlgorithmKey }
       return <PowerEigenFields onKeyDown={onKeyDown} />;
     case "xuong-thang":
       return <XuongThangFields onKeyDown={onKeyDown} />;
+    case "svd":
+    case "pseudoinverse":
+    case "condition-number":
+      return <SvdMatrixFields method={method} />;
     default: return null;
   }
 }
@@ -520,3 +524,25 @@ function XuongThangFields({ onKeyDown }: FieldProps) {
     </>
   );
 }
+
+function SvdMatrixFields({ method }: { method: "svd" | "pseudoinverse" | "condition-number" }) {
+  const hints: Record<typeof method, string> = {
+    svd: "Mọi kích thước m \u00d7 n. Ví dụ: ma trận 3\u00d72 rank thấp.",
+    pseudoinverse: "Mọi kích thước m \u00d7 n. Kết quả sẽ là ma trận n \u00d7 m.",
+    "condition-number": "Khuyến nghị ma trận vuông n \u00d7 n.",
+  };
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận A (mỗi hàng một dòng, các giá trị cách nhau bằng khoảng trắng hoặc dấu phẩy).<br />
+        {hints[method]}
+      </div>
+      <div className="form-section-title">Ma trận A</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">Ma trận A (m \u00d7 n)</label>
+        <textarea className="form-textarea" id="in-matA" name="matA" rows={5} spellCheck={false} />
+      </div>
+    </>
+  );
+}
+
