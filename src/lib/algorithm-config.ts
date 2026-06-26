@@ -109,8 +109,11 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     subtitle: "Giải hệ phi tuyến — Newton Method",
     icon: "∇",
     defaultValues: {
-      x0Str: "0.1 0.1 -0.1",
-      tol: "1e-6",
+      vars: "x, y",
+      funcs: "-x^2 + x + 4*y - 12\nx^2 - 4*x + 4*y^2 - 12*y - 12",
+      x0Str: "0 0",
+      tol: "1e-5",
+      maxIter: "50",
     },
     run: (params: Record<string, string>, logger: Logger) =>
       runNewtonSystem(params, logger),
@@ -120,9 +123,12 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     subtitle: "Lặp hội tụ giải hệ phi tuyến — Fixed-Point",
     icon: "⟳",
     defaultValues: {
+      vars: "x1, x2, x3",
+      phis: "(cos(x2 * x3) + 0.5) / 3\n(1/25) * sqrt(x1^2 + 0.3125) - 0.03\n-(1/20) * exp(-x1 * x2) - (10 * pi - 3) / 60",
       x0Str: "0 0 0",
       q: "0.34",
       epsilon: "1e-6",
+      maxIter: "100",
     },
     run: (params: Record<string, string>, logger: Logger) =>
       runLapDonSystem(params, logger),

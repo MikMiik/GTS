@@ -303,21 +303,31 @@ function GaussSeidelFields({ onKeyDown }: FieldProps) {
 function NewtonSystemFields({ onKeyDown }: FieldProps) {
   return (
     <>
-      <div className="matrix-help">
-        ⚙️ Hệ phương trình cố định từ bài toán mẫu:<br />
-        <code>3x₁ - cos(x₂x₃) - 0.5 = 0</code><br />
-        <code>x₁² - 81(x₂+0.1)² + sin(x₃) + 1.06 = 0</code><br />
-        <code>e^(-x₁x₂) + 20x₃ + 9.1389 = 0</code>
-      </div>
-      <div className="form-section-title">Điểm xuất phát X₀</div>
+      <div className="form-section-title">Hệ phương trình F(X) = 0</div>
       <div className="form-group">
-        <label className="form-label" htmlFor="in-x0">X₀ = [x₁, x₂, x₃] (cách nhau bằng dấu cách hoặc phẩy)</label>
+        <label className="form-label" htmlFor="in-vars">Các biến số (cách nhau bằng dấu phẩy)</label>
+        <input className="form-input" id="in-vars" name="vars" type="text" spellCheck={false} onKeyDown={onKeyDown} />
+        <div className="form-hint">Ví dụ: <code>x, y</code> hoặc <code>x1, x2, x3</code></div>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-funcs">Các phương trình f_i(X) = 0 (mỗi dòng 1 phương trình)</label>
+        <textarea className="form-textarea" id="in-funcs" name="funcs" rows={4} spellCheck={false} />
+      </div>
+
+      <div className="form-section-title">Tham số lặp</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-x0">Xấp xỉ đầu X₀ (cách nhau bằng khoảng trắng)</label>
         <input className="form-input" id="in-x0" name="x0Str" type="text" spellCheck={false} onKeyDown={onKeyDown} />
-        <div className="form-hint">Ví dụ: <code>0.1 0.1 -0.1</code></div>
       </div>
-      <div className="form-group">
-        <label className="form-label" htmlFor="in-tol">Tolerance (sai số hội tụ)</label>
-        <input className="form-input" id="in-tol" name="tol" type="text" onKeyDown={onKeyDown} />
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-tol">Sai số (Tolerance)</label>
+          <input className="form-input" id="in-tol" name="tol" type="text" onKeyDown={onKeyDown} />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-maxIter">Số lặp tối đa</label>
+          <input className="form-input" id="in-maxIter" name="maxIter" type="number" min="1" step="1" onKeyDown={onKeyDown} />
+        </div>
       </div>
     </>
   );
@@ -326,31 +336,41 @@ function NewtonSystemFields({ onKeyDown }: FieldProps) {
 function LapDonSystemFields({ onKeyDown }: FieldProps) {
   return (
     <>
-      <div className="matrix-help">
-        ⚙️ Hệ hàm lặp Φ cố định từ bài toán mẫu:<br />
-        <code>φ₁ = (cos(x₂x₃) + 0.5) / 3</code><br />
-        <code>φ₂ = (1/25)·√(x₁² + 0.3125) - 0.03</code><br />
-        <code>φ₃ = -(1/20)·e^(-x₁x₂) - (10π-3)/60</code>
-      </div>
-      <div className="form-section-title">Điểm xuất phát X₀</div>
+      <div className="form-section-title">Hệ hàm lặp Φ(X)</div>
       <div className="form-group">
-        <label className="form-label" htmlFor="in-x0">X₀ = [x₁, x₂, x₃]</label>
-        <input className="form-input" id="in-x0" name="x0Str" type="text" spellCheck={false} onKeyDown={onKeyDown} />
-        <div className="form-hint">Ví dụ: <code>0 0 0</code></div>
+        <label className="form-label" htmlFor="in-vars-lapdon">Các biến số (cách nhau bằng dấu phẩy)</label>
+        <input className="form-input" id="in-vars-lapdon" name="vars" type="text" spellCheck={false} onKeyDown={onKeyDown} />
+        <div className="form-hint">Ví dụ: <code>x1, x2, x3</code> hoặc <code>x, y</code></div>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-phis">Các hàm φ_i(X) (mỗi dòng 1 hàm)</label>
+        <textarea className="form-textarea" id="in-phis" name="phis" rows={4} spellCheck={false} />
+        <div className="form-hint">Ví dụ: <code>(cos(x2 * x3) + 0.5) / 3</code></div>
+      </div>
+
+      <div className="form-section-title">Tham số lặp</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-x0-lapdon">Xấp xỉ đầu X₀ (cách nhau bằng khoảng trắng)</label>
+        <input className="form-input" id="in-x0-lapdon" name="x0Str" type="text" spellCheck={false} onKeyDown={onKeyDown} />
       </div>
       <div className="form-row">
         <div className="form-group">
           <label className="form-label" htmlFor="in-q">Hệ số co <code>q</code> (0 &lt; q &lt; 1)</label>
-          <input className="form-input" id="in-q" name="q" type="number" step="any" onKeyDown={onKeyDown} />
+          <input className="form-input" id="in-q" name="q" type="text" onKeyDown={onKeyDown} />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="in-eps">Sai số <code>ε</code></label>
-          <input className="form-input" id="in-eps" name="epsilon" type="text" onKeyDown={onKeyDown} />
+          <label className="form-label" htmlFor="in-eps-lapdon">Sai số <code>ε</code></label>
+          <input className="form-input" id="in-eps-lapdon" name="epsilon" type="text" onKeyDown={onKeyDown} />
         </div>
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-maxIter-lapdon">Số lặp tối đa</label>
+        <input className="form-input" id="in-maxIter-lapdon" name="maxIter" type="number" min="1" step="1" onKeyDown={onKeyDown} />
       </div>
     </>
   );
 }
+
 
 
 function PowerEigenFields({ onKeyDown }: FieldProps) {
