@@ -17,6 +17,7 @@ import { runXuongThang } from "@/lib/algorithms/xuong-thang";
 import { runSvd } from "@/lib/algorithms/svd";
 import { runPseudoinverse } from "@/lib/algorithms/pseudoinverse";
 import { runConditionNumber } from "@/lib/algorithms/condition-number";
+import { runGramSchmidt } from "@/lib/algorithms/gram-schmidt";
 import type { AlgoConfig, AlgorithmKey, Logger } from "@/types/solver";
 
 export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
@@ -160,8 +161,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     subtitle: "Phân tích A = LU — LU Decomposition",
     icon: "LU",
     defaultValues: {
-      matA:
-        "2 2 0 0 0 0\n1 4 6 0 0 0\n0 1 4 2 0 0\n0 0 1 5 8 0\n0 0 0 1 4 2\n0 0 0 0 1 4",
+      matA: "2 2 0 0 0 0\n1 4 6 0 0 0\n0 1 4 2 0 0\n0 0 1 5 8 0\n0 0 0 1 4 2\n0 0 0 0 1 4",
     },
     run: runLuDecompose,
   },
@@ -170,8 +170,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     subtitle: "Giải Ax = b qua phân tích LU — LU Factorization",
     icon: "▧",
     defaultValues: {
-      matA:
-        "2 2 0 0 0 0 0\n1 3 2 0 0 0 0\n0 1 3 2 0 0 0\n0 0 1 3 2 0 0\n0 0 0 1 3 2 0\n0 0 0 0 1 3 2\n0 0 0 0 0 1 3",
+      matA: "2 2 0 0 0 0 0\n1 3 2 0 0 0 0\n0 1 3 2 0 0 0\n0 0 1 3 2 0 0\n0 0 0 1 3 2 0\n0 0 0 0 1 3 2\n0 0 0 0 0 1 3",
       vecB: "4\n6\n6\n6\n6\n6\n4",
     },
     run: runLuSolve,
@@ -181,8 +180,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     subtitle: "Phân tích A = LL^T (ma trận SPD) — Cholesky",
     icon: "L²",
     defaultValues: {
-      matA:
-        "1 1 1 1 1 1 1 1\n1 2 2 2 2 2 2 2\n1 2 3 3 3 3 3 3\n1 2 3 4 4 4 4 4\n1 2 3 4 5 5 5 5\n1 2 3 4 5 6 6 6\n1 2 3 4 5 6 7 7\n1 2 3 4 5 6 7 8",
+      matA: "1 1 1 1 1 1 1 1\n1 2 2 2 2 2 2 2\n1 2 3 3 3 3 3 3\n1 2 3 4 4 4 4 4\n1 2 3 4 5 5 5 5\n1 2 3 4 5 6 6 6\n1 2 3 4 5 6 7 7\n1 2 3 4 5 6 7 8",
     },
     run: runCholeskyDecompose,
   },
@@ -191,8 +189,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     subtitle: "Giải Ax = b qua Cholesky — Cholesky Factorization",
     icon: "◣",
     defaultValues: {
-      matA:
-        "1 1 1 1 1 1 1\n1 2 2 2 2 2 2\n1 2 3 3 3 3 3\n1 2 3 4 4 4 4\n1 2 3 4 5 5 5\n1 2 3 4 5 6 6\n1 2 3 4 5 6 7",
+      matA: "1 1 1 1 1 1 1\n1 2 2 2 2 2 2\n1 2 3 3 3 3 3\n1 2 3 4 4 4 4\n1 2 3 4 5 5 5\n1 2 3 4 5 6 6\n1 2 3 4 5 6 7",
       vecB: "7\n13\n18\n22\n25\n27\n28",
     },
     run: runCholeskySolve,
@@ -239,6 +236,15 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     },
     run: runConditionNumber,
   },
+  "gram-schmidt": {
+    title: "Trực chuẩn Gram-Schmidt",
+    subtitle: "Trực giao & Trực chuẩn hóa tập vector — Gram-Schmidt",
+    icon: "\u22a5",
+    defaultValues: {
+      vectors: "1 1 0\n1 0 1\n0 1 1",
+    },
+    run: runGramSchmidt,
+  },
 };
 
 export const SIDEBAR_SECTIONS = [
@@ -263,6 +269,11 @@ export const SIDEBAR_SECTIONS = [
     methods: ["danilevsky", "power-eigen", "xuong-thang"] as AlgorithmKey[],
   },
   {
-    methods: ["svd", "pseudoinverse", "condition-number"] as AlgorithmKey[],
+    methods: [
+      "svd",
+      "pseudoinverse",
+      "condition-number",
+      "gram-schmidt",
+    ] as AlgorithmKey[],
   },
 ] as const;

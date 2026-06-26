@@ -35,7 +35,8 @@ export type AlgorithmKey =
   | "xuong-thang"
   | "svd"
   | "pseudoinverse"
-  | "condition-number";
+  | "condition-number"
+  | "gram-schmidt";
 
 export interface AlgoConfig {
   title: string;
@@ -84,4 +85,4 @@ export const NONLINEAR_SYSTEM_METHODS = [
 
 export const EIGENVALUE_METHODS = ["danilevsky", "power-eigen", "xuong-thang"] as const;
 
-export const SVD_METHODS = ["svd", "pseudoinverse", "condition-number"] as const;
+export const SVD_METHODS = ["svd", "pseudoinverse", "condition-number", "gram-schmidt"] as const;

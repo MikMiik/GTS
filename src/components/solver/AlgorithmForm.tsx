@@ -89,6 +89,8 @@ function FormFields({ method, onKeyDown }: FieldProps & { method: AlgorithmKey }
     case "pseudoinverse":
     case "condition-number":
       return <SvdMatrixFields method={method} />;
+    case "gram-schmidt":
+      return <GramSchmidtFields />;
     default: return null;
   }
 }
@@ -566,3 +568,22 @@ function SvdMatrixFields({ method }: { method: "svd" | "pseudoinverse" | "condit
   );
 }
 
+function GramSchmidtFields() {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập tập hợp các vector cần trực chuẩn hóa.<br />
+        <strong>Mỗi hàng là một vector</strong>, các giá trị cách nhau bằng dấu cách hoặc phẩy.<br />
+        Ví dụ:<br />
+        <code>1 1 0</code><br />
+        <code>1 0 1</code><br />
+        <code>0 1 1</code>
+      </div>
+      <div className="form-section-title">Tập Vector Đầu Vào</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-vectors">Các vector (v₁, v₂, ..., vₙ)</label>
+        <textarea className="form-textarea" id="in-vectors" name="vectors" rows={5} spellCheck={false} />
+      </div>
+    </>
+  );
+}
