@@ -48,3 +48,5 @@ docker compose up -d --build
 
 - **Xem logs:** `docker compose logs -f`
 - **Dừng lại:** `docker compose down`
+
+### Tài liệu liên quan trong docs/GTS
