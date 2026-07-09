@@ -100,6 +100,7 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     defaultValues: {
       matA: "10 5 7\n2 15 3\n-3 1 30",
       vecB: "11\n12\n19",
+      equationFormat: "Ax=b",
       x0Str: "0 0 0",
       epsilon: "1e-2",
       maxIter: "100",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AlgorithmKey } from "@/types/solver";
 
 interface AlgorithmFormProps {
@@ -35,11 +35,14 @@ export default function AlgorithmForm({
     const form = formRef.current;
     const params: Record<string, string> = {};
     for (const key of Object.keys(defaultValues)) {
-      const el = form.elements.namedItem(key) as
-        | HTMLInputElement
-        | HTMLTextAreaElement
-        | null;
-      if (el) params[key] = el.value;
+      const el = form.elements.namedItem(key);
+      if (el) {
+        if (el instanceof RadioNodeList) {
+          params[key] = el.value;
+        } else {
+          params[key] = (el as HTMLInputElement | HTMLTextAreaElement).value;
+        }
+      }
     }
     onSubmit(params);
   };
@@ -509,18 +512,47 @@ function GaussJordanFields() {
 }
 
 function GaussSeidelFields({ onKeyDown }: FieldProps) {
+  const [eqFormat, setEqFormat] = useState<"Ax=b" | "x=Bx+d">("Ax=b");
+
   return (
     <>
-      <div className="matrix-help">
-        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và vector b (mỗi dòng một
-        giá trị).
-        <br />
-        Ví dụ hàng A: <code>10 5 7</code>
+      <div className="form-section-title">Dạng phương trình</div>
+      <div className="form-row">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="equationFormat"
+            value="Ax=b"
+            checked={eqFormat === "Ax=b"}
+            onChange={() => setEqFormat("Ax=b")}
+          />
+          <span>Hệ phương trình Ax = b</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="equationFormat"
+            value="x=Bx+d"
+            checked={eqFormat === "x=Bx+d"}
+            onChange={() => setEqFormat("x=Bx+d")}
+          />
+          <span>Hệ phương trình lặp x = Bx + d</span>
+        </label>
       </div>
-      <div className="form-section-title">Ma trận A (hệ số)</div>
+
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông {eqFormat === "Ax=b" ? "A" : "B"} (mỗi hàng một
+        dòng) và vector {eqFormat === "Ax=b" ? "b" : "d"} (mỗi dòng một giá
+        trị).
+        <br />
+        Ví dụ hàng {eqFormat === "Ax=b" ? "A" : "B"}: <code>10 5 7</code>
+      </div>
+      <div className="form-section-title">
+        Ma trận {eqFormat === "Ax=b" ? "A (hệ số)" : "B"}
+      </div>
       <div className="form-group">
         <label className="form-label" htmlFor="in-matA">
-          Ma trận A (n × n)
+          Ma trận {eqFormat === "Ax=b" ? "A" : "B"} (n × n)
         </label>
         <textarea
           className="form-textarea"
@@ -530,10 +562,12 @@ function GaussSeidelFields({ onKeyDown }: FieldProps) {
           spellCheck={false}
         />
       </div>
-      <div className="form-section-title">Vector b (vế phải)</div>
+      <div className="form-section-title">
+        Vector {eqFormat === "Ax=b" ? "b (vế phải)" : "d"}
+      </div>
       <div className="form-group">
         <label className="form-label" htmlFor="in-vecB">
-          Vector b (mỗi dòng 1 giá trị)
+          Vector {eqFormat === "Ax=b" ? "b" : "d"} (mỗi dòng 1 giá trị)
         </label>
         <textarea
           className="form-textarea"
