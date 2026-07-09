@@ -107,6 +107,8 @@ function FormFields({
       return <PowerEigenFields onKeyDown={onKeyDown} />;
     case "xuong-thang":
       return <XuongThangFields onKeyDown={onKeyDown} />;
+    case "svd-power":
+      return <SvdPowerFields onKeyDown={onKeyDown} />;
     case "svd":
     case "pseudoinverse":
     case "condition-number":
@@ -1233,6 +1235,71 @@ function SvdMatrixFields({
           rows={5}
           spellCheck={false}
         />
+      </div>
+    </>
+  );
+}
+
+function SvdPowerFields({ onKeyDown }: FieldProps) {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận A, véc-tơ khởi tạo x₀ (số chiều bằng số cột của A).
+      </div>
+      <div className="form-section-title">Đầu vào SVD (Lũy thừa)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">
+          Ma trận A (m × n)
+        </label>
+        <textarea
+          className="form-textarea"
+          id="in-matA"
+          name="matA"
+          rows={4}
+          spellCheck={false}
+        />
+      </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-vecX0">
+          Véc-tơ khởi tạo x₀
+        </label>
+        <input
+          className="form-input"
+          id="in-vecX0"
+          name="x0Str"
+          type="text"
+          spellCheck={false}
+          onKeyDown={onKeyDown}
+        />
+        <div className="form-hint">Ví dụ: <code>1 1</code></div>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-eps">
+            Sai số <code>ε</code>
+          </label>
+          <input
+            className="form-input"
+            id="in-eps"
+            name="epsilon"
+            type="text"
+            onKeyDown={onKeyDown}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-maxIter">
+            Số lặp tối đa <code>N</code>
+          </label>
+          <input
+            className="form-input"
+            id="in-maxIter"
+            name="maxIter"
+            type="number"
+            min="1"
+            step="1"
+            onKeyDown={onKeyDown}
+          />
+        </div>
       </div>
     </>
   );

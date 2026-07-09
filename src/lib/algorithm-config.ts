@@ -16,6 +16,7 @@ import { runCholeskyDecompose } from "@/lib/algorithms/cholesky-decompose";
 import { runCholeskySolve } from "@/lib/algorithms/cholesky-solve";
 import { runXuongThang } from "@/lib/algorithms/xuong-thang";
 import { runSvd } from "@/lib/algorithms/svd";
+import { runSvdPower } from "@/lib/algorithms/svd-power";
 import { runPseudoinverse } from "@/lib/algorithms/pseudoinverse";
 import { runConditionNumber } from "@/lib/algorithms/condition-number";
 import { runGramSchmidt } from "@/lib/algorithms/gram-schmidt";
@@ -232,6 +233,18 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     },
     run: runSvd,
   },
+  "svd-power": {
+    title: "Phân Rã SVD (Lũy thừa & Xuống thang)",
+    subtitle: "Thực hiện SVD từng bước qua lặp số trị",
+    icon: "\u03a3*",
+    defaultValues: {
+      matA: "4 -1 1\n-1 3 -2\n1 -2 3",
+      x0Str: "1 1 1",
+      epsilon: "1e-5",
+      maxIter: "100"
+    },
+    run: runSvdPower,
+  },
   pseudoinverse: {
     title: "Ma Trận Nghịch Đảo Suy Rộng",
     subtitle: "Tìm ma trận Moore-Penrose $A^\\dagger$ — Pseudoinverse",
@@ -286,6 +299,7 @@ export const SIDEBAR_SECTIONS = [
   {
     methods: [
       "svd",
+      "svd-power",
       "pseudoinverse",
       "condition-number",
       "gram-schmidt",

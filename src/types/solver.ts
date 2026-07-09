@@ -35,6 +35,7 @@ export type AlgorithmKey =
   | "cholesky-solve"
   | "xuong-thang"
   | "svd"
+  | "svd-power"
   | "pseudoinverse"
   | "condition-number"
   | "gram-schmidt";
