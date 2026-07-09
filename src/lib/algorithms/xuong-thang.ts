@@ -1,7 +1,6 @@
 import type { Logger } from "@/types/solver";
 import { parseFraction } from "./math-utils";
 import {
-  Complex,
   powerIteration,
   formatMatrixForLog,
   fmt,
@@ -183,7 +182,7 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
     logger.section("PHƯƠNG PHÁP XUỐNG THANG - CÁCH 1 (VÉC-TƠ RIÊNG TRÁI)");
     
     // 1. Tìm véc-tơ riêng trái w1
-    logger.step("1. Xác định véc-tơ riêng trái w₁");
+    logger.step("**Bước 1: Xác định véc-tơ riêng trái $w_1$**");
     const AT = transpose(A);
     const M = Array.from({ length: n }, () => new Array(n).fill(0));
     for (let i = 0; i < n; i++) {
@@ -193,33 +192,43 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
     }
     
     const w1 = findNullSpaceVector(M);
-    logger.info(`Giải hệ $$(A^T - \\lambda_1 I)w_1 = 0$$`);
+    logger.text("- Giải $(A^T - \\lambda_1 I)w_1 = 0$ tìm $w_1 \\neq 0$.");
     logger.info(`$$w_1 = \\begin{bmatrix} ${w1.map(v => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
 
     // 2. Tính x
-    logger.step("2. Tính véc-tơ chuẩn hóa x");
+    logger.step("**Bước 2: Tính véc-tơ $x$**");
     const dotW1V1 = dotProduct(w1, v1);
     if (Math.abs(dotW1V1) < 1e-15) {
       logger.error("$$w_1^T v_1 = 0$$, không thể tính véc-tơ x.");
       return;
     }
     const x = w1.map(val => val / dotW1V1);
-    logger.formula(`$$x = \\frac{w_1}{w_1^T v_1}$$`);
+    logger.text("- $x = \\frac{w_1}{w_1^T v_1}$.");
     logger.info(`$$w_1^T v_1 = ${fmt(dotW1V1)}$$`);
     logger.info(`$$x = \\begin{bmatrix} ${x.map(v => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
 
     // 3. Tính B
-    logger.step("3. Xây dựng ma trận xuống thang B");
+    logger.step("**Bước 3: Lập ma trận xuống thang $B$**");
     const L1_v1_xT = outerProduct(v1.map(v => v * l1), x);
     B = subtractMatrix(A, L1_v1_xT);
-    logger.formula("$$B = A - \\lambda_1 v_1 x^T$$");
+    logger.text("- $B = A - \\lambda_1 v_1 x^T$.");
     logger.text("Ma trận xuống thang B:");
     logger.table(formatMatrixForLog(B));
+    
+    // 4. Lũy thừa
+    logger.step("**Bước 4: Tìm $\\lambda_2$ bằng phương pháp lũy thừa trên $B$**");
+    logger.text("- Chọn $y_0 \\neq 0$.");
+    logger.text("- Lặp $k \\ge 0$:");
+    logger.text("  - Tính $z_{k+1} = B y_k$.");
+    logger.text("  - Tìm chỉ số $p$ sao cho $|(z_{k+1})_p|$ max.");
+    logger.text("  - Gán $\\lambda_2^{(k+1)} = (z_{k+1})_p$.");
+    logger.text("  - Chuẩn hóa $y_{k+1} = \\frac{z_{k+1}}{(z_{k+1})_p}$.");
+    logger.text("  - Dừng nếu $\\|y_{k+1} - y_k\\|_\\infty < \\epsilon$. Thu được $\\lambda_2 = \\lambda_2^{(k+1)}$.");
   } else {
     logger.section("PHƯƠNG PHÁP XUỐNG THANG - CÁCH 2 (MA TRẬN KHỬ)");
 
     // 1. Tìm phần tử max của v1
-    logger.step("1. Chuẩn hóa véc-tơ v₁");
+    logger.step("**Bước 1: Chuẩn hóa $v_1$**");
     let maxIndex = 0;
     let maxVal = Math.abs(v1[0]);
     for (let i = 1; i < n; i++) {
@@ -236,11 +245,15 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
 
     const v1_s = v1[maxIndex];
     const v1Norm = v1.map(v => v / v1_s);
-    logger.info(`Thành phần có trị tuyệt đối lớn nhất nằm ở vị trí s = ${maxIndex + 1} ($$v_{1,s} = ${fmt(v1_s)}$$)`);
-    logger.info(`Chuẩn hóa $$v_1$$ (chia cho $$v_{1,s}$$): $$v_1 = \\begin{bmatrix} ${v1Norm.map(v => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
+    logger.text("- Tìm chỉ số $s$ sao cho $|(v_1)_s|$ max.");
+    logger.info(`Vị trí s = ${maxIndex + 1} ($$v_{1,s} = ${fmt(v1_s)}$$)`);
+    logger.text("- Cập nhật $v_1 = \\frac{v_1}{(v_1)_s}$ (để thành phần thứ $s$ bằng 1).");
+    logger.info(`$$v_1 = \\begin{bmatrix} ${v1Norm.map(v => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
 
     // 2. Tính Theta
-    logger.step("2. Xây dựng ma trận khử Θ");
+    logger.step("**Bước 2: Lập ma trận khử $\\Theta$**");
+    logger.text("- Khởi tạo $\\Theta = I_n$.");
+    logger.text("- Cập nhật cột $s$ của $\\Theta$: $\\Theta_{i, s} = \\Theta_{i, s} - (v_1)_i$ với $i = \\overline{1,n}$.");
     const Theta = Array.from({ length: n }, () => new Array(n).fill(0));
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
@@ -252,41 +265,29 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
     logger.table(formatMatrixForLog(Theta));
 
     // 3. Tính A^(2)
-    logger.step("3. Tính ma trận xuống thang $$A^{(2)} = \\Theta A$$");
+    logger.step("**Bước 3: Lập ma trận xuống thang $A^{(2)}$**");
     B = multiplyMatrix(Theta, A);
-    logger.text("Ma trận $$A^{(2)}$$:");
+    logger.text("- $A^{(2)} = \\Theta A$.");
+    logger.text("Ma trận xuống thang $A^{(2)}$:");
     logger.table(formatMatrixForLog(B));
+
+    // 4. Lũy thừa
+    logger.step("**Bước 4: Tìm $\\lambda_2$ bằng phương pháp lũy thừa trên $A^{(2)}$**");
+    logger.text("- Chọn $y_0 \\neq 0$.");
+    logger.text("- Lặp $k \\ge 0$:");
+    logger.text("  - Tính $z_{k+1} = A^{(2)} y_k$.");
+    logger.text("  - Tìm chỉ số $p$ sao cho $|(z_{k+1})_p|$ max.");
+    logger.text("  - Gán $\\lambda_2^{(k+1)} = (z_{k+1})_p$.");
+    logger.text("  - Chuẩn hóa $y_{k+1} = \\frac{z_{k+1}}{(z_{k+1})_p}$.");
+    logger.text("  - Dừng nếu $\\|y_{k+1} - y_k\\|_\\infty < \\epsilon$. Thu được $\\lambda_2 = \\lambda_2^{(k+1)}$.");
   }
 
-  // 4. Áp dụng phương pháp lũy thừa trên B
-  logger.section("BƯỚC 4: PHƯƠNG PHÁP LŨY THỪA TRÊN MA TRẬN XUỐNG THANG");
-  const { converged, caseType, lambda, eigenvector, k } = powerIteration(
+  logger.separator();
+  powerIteration(
     B,
     y0,
     eps,
     maxIter,
     logger,
   );
-
-  logger.separator();
-
-  if (converged && lambda !== null) {
-    logger.success(`✔ Phương pháp lũy thừa hội tụ tại bước k = ${k} (${caseType}).`);
-    if (lambda instanceof Complex) {
-      logger.result(`Giá trị riêng trội thứ hai: $$\\lambda_2 \\approx ${lambda.toString()}$$`);
-    } else {
-      logger.result(`Giá trị riêng trội thứ hai: $$\\lambda_2 \\approx ${fmt(lambda)}$$`);
-    }
-    logger.result(`Vector riêng tương ứng (của ma trận B/A²): $$u_2 \\approx \\begin{bmatrix} ${eigenvector.map(v => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
-  } else if (lambda !== null) {
-    logger.warn(`⚠ Chưa đạt hội tụ sau ${maxIter} vòng lặp.`);
-    if (lambda instanceof Complex) {
-      logger.result(`$$\\lambda_2 \\approx ${lambda.toString()} \\quad (|\\lambda_2| \\approx ${fmt(lambda.abs())})$$`);
-    } else {
-      logger.result(`$$\\lambda_2 \\approx ${fmt(lambda)}$$`);
-    }
-    logger.result(`Vector riêng tương ứng: $$u_2 \\approx \\begin{bmatrix} ${eigenvector.map(v => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
-  } else {
-    logger.warn(`⚠ Lỗi thuật toán phân rã.`);
-  }
 }

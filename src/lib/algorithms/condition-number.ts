@@ -67,13 +67,13 @@ export function runConditionNumber(params: Record<string, string>, logger: Logge
   logger.separator();
 
   // Bước 1
-  logger.step("**Bước 1:** Tính $A^T A$");
+  logger.step("**Bước 1:** Tính ma trận $A^TA$");
   const At = transpose(A);
   const AtA = matMul(At, A);
   logger.formula(`$$A^T A = ${fmtMat(AtA)}$$`);
 
   // Bước 2
-  logger.step("**Bước 2:** Tìm các giá trị riêng $\\lambda_i$ của $A^T A$");
+  logger.step("**Bước 2:** Giải $\\det(A^TA - \\lambda I) = 0$ tìm $\\lambda_i$");
   let eigenResult;
   try {
     eigenResult = math.eigs(AtA as number[][]);
@@ -86,7 +86,7 @@ export function runConditionNumber(params: Record<string, string>, logger: Logge
   logger.info(`Các giá trị riêng (giảm dần): $[${rawVals.map(fmtNum).join(", ")}]$`);
 
   // Bước 3
-  logger.step("**Bước 3:** Tính các giá trị kỳ dị $\\sigma_i = \\sqrt{\\lambda_i}$");
+  logger.step("**Bước 3:** Tính $\\sigma_i = \\sqrt{\\lambda_i}$");
   const EPS = 1e-9;
   const sigmas = rawVals
     .filter((v) => v > EPS)
@@ -99,7 +99,7 @@ export function runConditionNumber(params: Record<string, string>, logger: Logge
   }
 
   // Bước 4 & 5
-  logger.step("**Bước 4 & 5:** Xác định $\\sigma_{\\max}$, $\\sigma_{\\min}$ và tính $cond(A)$");
+  logger.step("**Bước 4:** Xác định $\\sigma_{\\max}$ và $\\sigma_{\\min}$");
   const sigmaMax = Math.max(...sigmas);
   const sigmaMin = Math.min(...sigmas);
   logger.info(`$\\sigma_{\\max} = ${fmtNum(sigmaMax)}$,  $\\sigma_{\\min} = ${fmtNum(sigmaMin)}$`);
@@ -113,6 +113,7 @@ export function runConditionNumber(params: Record<string, string>, logger: Logge
 
   const cond = sigmaMax / sigmaMin;
   logger.separator();
+  logger.step("**Bước 5:** Tính $cond(A) = \\frac{\\sigma_{\\max}}{\\sigma_{\\min}}$");
   logger.result(`$$cond(A) = \\frac{\\sigma_{\\max}}{\\sigma_{\\min}} = \\frac{${fmtNum(sigmaMax)}}{${fmtNum(sigmaMin)}} = ${fmtNum(cond)}$$`);
 
   if (cond < 10) {

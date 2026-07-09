@@ -22,6 +22,21 @@ export default function LogOutput({ entries }: LogOutputProps) {
     );
   }
 
+  const renderCellContent = (content: unknown) => {
+    if (typeof content === "string" && content.includes("$")) {
+      return (
+        <ReactMarkdown
+          remarkPlugins={[remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+          components={{ p: ({ children }) => <>{children}</> }}
+        >
+          {content}
+        </ReactMarkdown>
+      );
+    }
+    return content !== null && content !== undefined ? String(content) : "";
+  };
+
   return (
     <>
       {entries.map((entry, idx) => {
@@ -54,7 +69,7 @@ export default function LogOutput({ entries }: LogOutputProps) {
                   <thead>
                     <tr>
                       {headers.map((h) => (
-                        <th key={h}>{h}</th>
+                        <th key={h}>{renderCellContent(h)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -71,9 +86,7 @@ export default function LogOutput({ entries }: LogOutputProps) {
                                 : undefined
                             }
                           >
-                            {row[h] !== null && row[h] !== undefined
-                              ? String(row[h])
-                              : ""}
+                            {renderCellContent(row[h])}
                           </td>
                         ))}
                       </tr>

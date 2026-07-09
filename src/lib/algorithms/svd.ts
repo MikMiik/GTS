@@ -137,12 +137,14 @@ export interface SvdResult {
 export function computeSVD(A: Mat, logger: Logger): SvdResult | null {
   const m = A.length, n = A[0].length;
 
-  logger.step("**Bước 1:** Tính ma trận đối xứng $A^T A$");
+  logger.step("**Bước 1: Tính ma trận $A^TA$**");
   const At = transpose(A);
   const AtA = matMul(At, A);
   logger.formula(`$$A^T A = ${fmtMat(AtA)}$$`);
 
-  logger.step("**Bước 2:** Tìm giá trị riêng và vector riêng của $A^T A$");
+  logger.step("**Bước 2: Tìm giá trị riêng và vector riêng của $A^TA$**");
+  logger.text("- Giải $\\det(A^TA - \\lambda I) = 0$ tìm $\\lambda_i$.");
+  logger.text("- Sắp xếp $\\lambda_i$ giảm dần: $\\lambda_1 \\ge \\lambda_2 \\ge \\dots \\ge \\lambda_r > 0$ và $\\lambda_{r+1} = \\dots = \\lambda_n = 0$.");
   let eigenResult;
   try {
     eigenResult = math.eigs(AtA as number[][]);
@@ -164,9 +166,13 @@ export function computeSVD(A: Mat, logger: Logger): SvdResult | null {
   const rank = rawVals.filter((v) => v > EPS).length;
   logger.info(`Hạng của ma trận: $r = ${rank}$`);
 
+  logger.text("- Với mỗi $\\lambda_i$, giải $(A^TA - \\lambda_i I)x = 0$ tìm vector riêng $v_i$.");
+  logger.text("- Trực chuẩn hóa hệ $\\{v_1, v_2, \\dots, v_n\\}$ (dùng Gram-Schmidt nếu cần).");
+
   // Gram-Schmidt toàn bộ V
   const VCols = gramSchmidt(rawVecs);
-  logger.step("**Bước 3:** Xác định các giá trị kỳ dị $\\sigma_i = \\sqrt{\\lambda_i}$");
+  logger.step("**Bước 3: Xác định ma trận $\\Sigma$**");
+  logger.text("- Tính $\\sigma_i = \\sqrt{\\lambda_i}$ với $i = \\overline{1,r}$.");
   const sigmas = rawVals.slice(0, rank).map((lam) => Math.sqrt(Math.max(lam, 0)));
   logger.formula(`$$\\sigma = [${sigmas.map(fmtNum).join(", ")}]$$`);
 
@@ -175,13 +181,19 @@ export function computeSVD(A: Mat, logger: Logger): SvdResult | null {
     Array.from({ length: n }, (_, j) => (i === j && i < rank ? sigmas[i] : 0))
   );
 
-  logger.step("**Bước 4:** Lập ma trận vector kỳ dị phải $V$");
+  logger.text("- Lập $\\Sigma \\in \\mathbb{R}^{m \\times n}$. Đặt $\\sigma_1, \\dots, \\sigma_r$ lên đường chéo chính, các phần tử còn lại bằng $0$.");
+
+  logger.step("**Bước 4: Lập ma trận $V$**");
+  logger.text("- Lập ma trận trực giao $V = \\begin{bmatrix} v_1 & v_2 & \\dots & v_n \\end{bmatrix}$.");
   const V: Mat = Array.from({ length: n }, (_, i) =>
     Array.from({ length: n }, (_, j) => VCols[j]?.[i] ?? 0)
   );
   logger.formula(`$$V = ${fmtMat(V)}$$`);
 
-  logger.step("**Bước 5:** Lập ma trận vector kỳ dị trái $U$");
+  logger.text("- Lấy chuyển vị $V^T$.");
+
+  logger.step("**Bước 5: Lập ma trận $U$**");
+  logger.text("- **Với $r$ cột đầu ($i = \\overline{1,r}$):** Tính $u_i = \\frac{1}{\\sigma_i}Av_i$.");
   // r cột đầu: u_i = (1/σ_i) * A * v_i
   const UCols: number[][] = [];
   for (let i = 0; i < rank; i++) {
@@ -194,6 +206,7 @@ export function computeSVD(A: Mat, logger: Logger): SvdResult | null {
 
   // Bổ sung m-r cột còn lại từ null space của AA^T
   if (m > rank) {
+    logger.text("- **Với $m - r$ cột còn lại:** Giải $(AA^T - 0I)u = 0$, chọn các vector cơ sở trực chuẩn $u_{r+1}, \\dots, u_m$.");
     const AAt = matMul(A, At);
     const nullVecs = nullSpaceBasis(AAt);
     const extra = gramSchmidt([...UCols, ...nullVecs]).slice(rank);
@@ -202,6 +215,8 @@ export function computeSVD(A: Mat, logger: Logger): SvdResult | null {
       logger.info(`Bổ sung ${extra.length} vector trực chuẩn từ null space của $AA^T$ để hoàn thành $U$.`);
     }
   }
+
+  logger.text("- Lập ma trận trực giao $U = \\begin{bmatrix} u_1 & u_2 & \\dots & u_m \\end{bmatrix}$.");
 
   const U: Mat = Array.from({ length: m }, (_, i) =>
     Array.from({ length: m }, (_, j) => UCols[j]?.[i] ?? 0)
@@ -232,7 +247,8 @@ export function runSvd(params: Record<string, string>, logger: Logger): void {
 
   const { U, Sigma, Vt } = result;
 
-  logger.step("**Bước 6:** Khai triển SVD đầy đủ $A = U\\Sigma V^T$");
+  logger.step("**Bước 6: Khai triển SVD**");
+  logger.text("- $A = U\\Sigma V^T$.");
   logger.separator();
   logger.result(`$$U = ${fmtMat(U)}$$`);
   logger.result(`$$\\Sigma = ${fmtMat(Sigma)}$$`);

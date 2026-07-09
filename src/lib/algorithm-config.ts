@@ -149,8 +149,8 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     subtitle: "Tìm trị riêng lớn nhất — Power Iteration",
     icon: "λ",
     defaultValues: {
-      matA: "4 1\n2 3",
-      x0Str: "1 1",
+      matA: "4 -1 1\n-1 3 -2\n1 -2 3",
+      x0Str: "1 1 1",
       epsilon: "1e-6",
       maxIter: "100",
     },

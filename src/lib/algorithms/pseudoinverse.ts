@@ -131,12 +131,14 @@ export function runPseudoinverse(params: Record<string, string>, logger: Logger)
   logger.separator();
 
   // ── Bước 1-2: Tính AtA và trị riêng ──────────────────────────────────────
-  logger.step("**Bước 1:** Tính $A^T A$");
+  logger.step("**Bước 1: Tính ma trận $A^TA$**");
   const At = transpose(A);
   const AtA = matMul(At, A);
   logger.formula(`$$A^T A = ${fmtMat(AtA)}$$`);
 
-  logger.step("**Bước 2:** Tìm trị riêng và vector riêng của $A^T A$");
+  logger.step("**Bước 2: Tìm giá trị riêng và vector riêng của $A^TA$**");
+  logger.text("- Giải $\\det(A^TA - \\lambda I) = 0$ tìm $\\lambda_i$.");
+  logger.text("- Sắp xếp $\\lambda_i$ giảm dần: $\\lambda_1 \\ge \\lambda_2 \\ge \\dots \\ge \\lambda_r > 0$ và $\\lambda_{r+1} = \\dots = \\lambda_n = 0$.");
   let eigenResult;
   try {
     eigenResult = math.eigs(AtA as number[][]);
@@ -155,18 +157,22 @@ export function runPseudoinverse(params: Record<string, string>, logger: Logger)
   logger.info(`Hạng $r = ${rank}$, các giá trị riêng: $[${rawVals.map(fmtNum).join(", ")}]$`);
 
   const VCols = gramSchmidt(rawVecs);
+  logger.text("- Với mỗi $\\lambda_i$, giải $(A^TA - \\lambda_i I)x = 0$ tìm vector riêng $v_i$.");
+  logger.text("- Trực chuẩn hóa hệ $\\{v_1, v_2, \\dots, v_n\\}$.");
+
   const sigmas = rawVals.slice(0, rank).map((lam) => Math.sqrt(Math.max(lam, 0)));
-  logger.info(`Các giá trị kỳ dị: $\\sigma = [${sigmas.map(fmtNum).join(", ")}]$`);
 
   // ── Bước 3: Lập V ────────────────────────────────────────────────────────
-  logger.step("**Bước 3:** Lập ma trận $V$ (vector kỳ dị phải)");
+  logger.step("**Bước 3: Lập ma trận $V$**");
+  logger.text("- Lập ma trận trực giao $V = \\begin{bmatrix} v_1 & v_2 & \\dots & v_n \\end{bmatrix} \\in \\mathbb{R}^{n \\times n}$.");
   const V: Mat = Array.from({ length: n }, (_, i) =>
     Array.from({ length: n }, (_, j) => VCols[j]?.[i] ?? 0)
   );
   logger.formula(`$$V = ${fmtMat(V)}$$`);
 
   // ── Bước 4: Lập U ────────────────────────────────────────────────────────
-  logger.step("**Bước 4:** Lập ma trận $U$ (vector kỳ dị trái)");
+  logger.step("**Bước 4: Lập ma trận $U$**");
+  logger.text("- **Với $r$ cột đầu ($i = \\overline{1,r}$):** Tính $u_i = \\frac{1}{\\sqrt{\\lambda_i}}Av_i$.");
   const UCols: number[][] = [];
   for (let i = 0; i < rank; i++) {
     const vi = VCols[i];
@@ -174,6 +180,7 @@ export function runPseudoinverse(params: Record<string, string>, logger: Logger)
     UCols.push(ui);
   }
   if (m > rank) {
+    logger.text("- **Với $m - r$ cột còn lại:** Giải $(AA^T - 0I)u = 0$, chọn các vector cơ sở trực chuẩn $u_{r+1}, \\dots, u_m$.");
     const AAt = matMul(A, At);
     const nullVecs = nullSpaceBasis(AAt);
     const extra = gramSchmidt([...UCols, ...nullVecs]).slice(rank);
@@ -182,17 +189,21 @@ export function runPseudoinverse(params: Record<string, string>, logger: Logger)
   const U: Mat = Array.from({ length: m }, (_, i) =>
     Array.from({ length: m }, (_, j) => UCols[j]?.[i] ?? 0)
   );
+  logger.text("- Lập ma trận trực giao $U = \\begin{bmatrix} u_1 & u_2 & \\dots & u_m \\end{bmatrix} \\in \\mathbb{R}^{m \\times m}$.");
   logger.formula(`$$U = ${fmtMat(U)}$$`);
 
   // ── Bước 5: Lập Sigma^{-1} ───────────────────────────────────────────────
-  logger.step("**Bước 5:** Lập ma trận $\\Sigma^{\\dagger}$ (nghịch đảo của $\\Sigma$, kích thước $n \\times m$)");
+  logger.step("**Bước 5: Lập ma trận $\\Sigma^{-1}$**");
+  logger.text("- Tính $\\sigma_i = \\sqrt{\\lambda_i}$ với $i = \\overline{1,r}$.");
+  logger.text("- Lập $\\Sigma^{-1} \\in \\mathbb{R}^{n \\times m}$. Đặt $\\frac{1}{\\sigma_1}, \\dots, \\frac{1}{\\sigma_r}$ lên đường chéo chính, các phần tử còn lại bằng $0$.");
   const SigmaDag: Mat = Array.from({ length: n }, (_, i) =>
     Array.from({ length: m }, (_, j) => (i === j && i < rank ? 1 / sigmas[i] : 0))
   );
-  logger.formula(`$$\\Sigma^{\\dagger} = ${fmtMat(SigmaDag)}$$`);
+  logger.formula(`$$\\Sigma^{-1} = ${fmtMat(SigmaDag)}$$`);
 
   // ── Bước 6: Tính A† = V * Σ† * U^T ─────────────────────────────────────
-  logger.step("**Bước 6:** Tính $A^\\dagger = V \\Sigma^{\\dagger} U^T$");
+  logger.step("**Bước 6: Tính $A^\\dagger$**");
+  logger.text("- $A^\\dagger = V\\Sigma^{-1}U^T$.");
   const Ut = transpose(U);
   const ADag = matMul(matMul(V, SigmaDag), Ut);
   logger.separator();

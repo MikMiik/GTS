@@ -5,21 +5,10 @@ type NumMatrix = number[][];
 
 export type CaseType = "TH1" | "TH2" | "TH3";
 
-interface IterRecord {
-  k: number;
-  x: number[];
-  y: number[];
-  lambdaEst: number | null;
-  lambdaSqEst: number | null;
-  caseType: CaseType;
-  deltaLambda: number | null;
-}
-
-const TABLE_DECIMALS = 4;
-const RATIO_TOL = 1e-10;
+const TABLE_DECIMALS = 5;
 
 // ---------------------------------------------------------------------------
-// Số phức tối giản — dùng cho TH3
+// Số phức
 // ---------------------------------------------------------------------------
 
 export class Complex {
@@ -55,38 +44,41 @@ function pickDominantRoot(r1: Complex, r2: Complex): Complex {
 }
 
 // ---------------------------------------------------------------------------
-// Parse đầu vào
+// Parse & Format
 // ---------------------------------------------------------------------------
 
 function parseMatrix(text: string): NumMatrix {
-  const lines = text.trim().split("\n").filter(l => l.trim() !== "");
+  const lines = text
+    .trim()
+    .split("\n")
+    .filter((l) => l.trim() !== "");
   if (lines.length === 0) throw new Error("Ma trận rỗng");
   return lines.map((line, i) => {
-    const normalizedLine = line.replace(/\s*\/\s*/g, '/');
-    const vals = normalizedLine.trim().split(/[\s,;]+/).map(v => {
-      const n = parseFraction(v);
-      if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
-      return n;
-    });
+    const normalizedLine = line.replace(/\s*\/\s*/g, "/");
+    const vals = normalizedLine
+      .trim()
+      .split(/[\s,;]+/)
+      .map((v) => {
+        const n = parseFraction(v);
+        if (isNaN(n))
+          throw new Error(`Giá trị không hợp lệ "${v}" ở hàng ${i + 1}`);
+        return n;
+      });
     return vals;
   });
 }
 
 function parseVector(text: string): number[] {
-  const normalizedText = text.replace(/\s*\/\s*/g, '/');
+  const normalizedText = text.replace(/\s*\/\s*/g, "/");
   const trimmed = normalizedText.trim();
   if (!trimmed) throw new Error("Vector rỗng");
   const parts = trimmed.split(/[\s,;]+/);
-  return parts.map(v => {
+  return parts.map((v) => {
     const n = parseFraction(v);
     if (isNaN(n)) throw new Error(`Giá trị không hợp lệ "${v}"`);
     return n;
   });
 }
-
-// ---------------------------------------------------------------------------
-// Định dạng
-// ---------------------------------------------------------------------------
 
 export function fmt(v: number, d = TABLE_DECIMALS): string {
   if (!Number.isFinite(v)) return String(v);
@@ -95,7 +87,7 @@ export function fmt(v: number, d = TABLE_DECIMALS): string {
 }
 
 export function formatVec(vec: number[]): string {
-  return `[${vec.map((v) => fmt(v)).join(", ")}]`;
+  return `[${vec.map(fmt).join(", ")}]`;
 }
 
 export function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
@@ -108,7 +100,7 @@ export function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
 }
 
 // ---------------------------------------------------------------------------
-// Phép toán vector / ma trận
+// Phép toán
 // ---------------------------------------------------------------------------
 
 function matVecMul(A: NumMatrix, x: number[]): number[] {
@@ -119,115 +111,20 @@ export function infNorm(v: number[]): number {
   return Math.max(...v.map((x) => Math.abs(x)));
 }
 
-function normalizeInf(v: number[]): number[] {
-  const n = infNorm(v);
-  if (n < RATIO_TOL) return [...v];
-  return v.map((x) => x / n);
-}
-
-function scaleIfLarge(v: number[]): number[] {
-  const n = infNorm(v);
-  if (n > 1e10) return v.map((x) => x / n);
-  return v;
-}
-
-// ---------------------------------------------------------------------------
-// Ước lượng λ theo từng trường hợp
-// ---------------------------------------------------------------------------
-
-/** TH1: λ ≈ y_i / x_i tại các chỉ số |x_i| đủ lớn */
-function estimateLambdaTH1(x: number[], y: number[]): number | null {
-  const ratios: number[] = [];
-  for (let i = 0; i < x.length; i++) {
-    if (Math.abs(x[i]) > RATIO_TOL) ratios.push(y[i] / x[i]);
-  }
-  if (ratios.length === 0) return null;
-  ratios.sort((a, b) => a - b);
-  return ratios[Math.floor(ratios.length / 2)];
-}
-
-/** TH2: λ₁² ≈ y_i / x_i với bước chẵn */
-function estimateLambdaSqTH2(xEven: number[], yEvenPlus2: number[]): number | null {
-  const ratios: number[] = [];
-  for (let i = 0; i < xEven.length; i++) {
-    if (Math.abs(xEven[i]) > RATIO_TOL) ratios.push(yEvenPlus2[i] / xEven[i]);
-  }
-  if (ratios.length === 0) return null;
-  ratios.sort((a, b) => a - b);
-  const median = ratios[Math.floor(ratios.length / 2)];
-  return median >= 0 ? median : null;
-}
-
-/** TH3: giải λ² - pλ + q = 0 từ hai chỉ số thành phần */
-function estimateLambdaTH3(
-  vn: number[],
-  vn1: number[],
-  vn2: number[],
-): { lambda: Complex; p: number; q: number } | null {
-  const indices = vn
-    .map((_, i) => i)
-    .filter((i) => Math.abs(vn[i]) > RATIO_TOL)
-    .sort((a, b) => Math.abs(vn[b]) - Math.abs(vn[a]));
-
-  if (indices.length < 2) return null;
-
-  for (let a = 0; a < indices.length - 1; a++) {
-    for (let b = a + 1; b < indices.length; b++) {
-      const i = indices[a];
-      const j = indices[b];
-      const c1 = vn[i];
-      const b1 = vn1[i];
-      const a1 = vn2[i];
-      const c2 = vn[j];
-      const b2 = vn1[j];
-      const a2 = vn2[j];
-
-      const det = b1 * c2 - b2 * c1;
-      if (Math.abs(det) < RATIO_TOL) continue;
-
-      const p = (a1 * c2 - a2 * c1) / det;
-      const q = (a1 * b2 - a2 * b1) / det;
-      const [r1, r2] = solveQuadratic(p, q);
-      const dominant = pickDominantRoot(r1, r2);
-      if (dominant.abs() > RATIO_TOL) return { lambda: dominant, p, q };
+function getLargestAbsElement(v: number[]): number {
+  let maxAbs = -1;
+  let maxVal = 0;
+  for (let i = 0; i < v.length; i++) {
+    if (Math.abs(v[i]) > maxAbs) {
+      maxAbs = Math.abs(v[i]);
+      maxVal = v[i];
     }
   }
-  return null;
+  return maxVal;
 }
 
 // ---------------------------------------------------------------------------
-// Phát hiện trường hợp
-// ---------------------------------------------------------------------------
-
-function detectCaseTH2(history: IterRecord[]): boolean {
-  if (history.length < 4) return false;
-  const recent = history.slice(-4);
-  let alternations = 0;
-  for (let i = 1; i < recent.length; i++) {
-    const prev = recent[i - 1].lambdaEst;
-    const curr = recent[i].lambdaEst;
-    if (prev === null || curr === null) continue;
-    const sameModulus = Math.abs(Math.abs(curr) - Math.abs(prev)) < 0.1 * Math.abs(prev);
-    const oppositeSign = curr * prev < 0;
-    if (sameModulus && oppositeSign) alternations++;
-  }
-  return alternations >= 2;
-}
-
-function detectCaseTH3(history: IterRecord[]): boolean {
-  if (history.length < 6) return false;
-  const recent = history.slice(-6);
-  const lambdas = recent.map((r) => r.lambdaEst).filter((v): v is number => v !== null);
-  if (lambdas.length < 4) return false;
-
-  const deltas = lambdas.slice(1).map((v, i) => Math.abs(v - lambdas[i]));
-  const notConverging = deltas.every((d) => d > 0.01);
-  const notTH2 = !detectCaseTH2(recent);
-  return notConverging && notTH2;
-}
-
-// ---------------------------------------------------------------------------
-// Vòng lặp chính
+// Vòng lặp chính và Phân tích kết quả
 // ---------------------------------------------------------------------------
 
 export function powerIteration(
@@ -243,140 +140,191 @@ export function powerIteration(
   eigenvector: number[];
   k: number;
 } {
-  let x = normalizeInf([...x0]);
-  let caseType: CaseType = "TH1";
-  let prevLambda: number | null = null;
-  let prevLambdaSq: number | null = null;
-  let prevModulus: number | null = null;
-  const history: IterRecord[] = [];
-  const tableData: Record<string, unknown>[] = [];
-  const vectorSnapshots: number[][] = [normalizeInf([...x0])];
+  // Bước 1: Tính chuỗi lặp
+  logger.step("**Bước 1: Tính chuỗi lặp và chuẩn hóa**");
 
-  const xCols0 = Object.fromEntries(x.map((_, i) => [`x${i + 1}`, fmt(x[i])]));
+  const tableData: Record<string, unknown>[] = [];
+
+  let x = [...x0];
+  let k = 0;
+  let converged = false;
+
+  const xCols0 = Object.fromEntries(
+    x.map((_, i) => [`$(x_k)_{${i + 1}}$`, fmt(x[i])]),
+  );
   tableData.push({
-    k: 0,
+    "$k$": k,
     ...xCols0,
-    "λ ước lượng": "—",
-    TH: "—",
-    "‖Δλ‖": "—",
+    "$m_k$": "—",
+    "$\\|x_k - x_{k-1}\\|_\\infty$": "—",
   });
 
-  let converged = false;
-  let finalLambda: number | Complex | null = null;
-  let k = 0;
+  let mk = 0;
 
   for (k = 1; k <= maxIter; k++) {
-    const y = scaleIfLarge(matVecMul(A, x));
-    vectorSnapshots.push([...y]);
+    const y = matVecMul(A, x);
+    mk = getLargestAbsElement(y);
 
-    if (caseType === "TH1" && k >= 4 && detectCaseTH2(history)) {
-      caseType = "TH2";
-      logger.step(
-        "Nhận diện TH2: λ ước lượng xen kẽ dấu, |λ_k| ≈ |λ_{k-1}| → chuyển sang công thức bước chẵn.",
+    if (Math.abs(mk) < 1e-15) {
+      logger.error(
+        `Tại bước $k=${k}$, vector lặp trở thành vector 0. Giá trị riêng có thể là 0.`,
       );
-      logger.formula("$$\\lambda_1^2 \\approx \\frac{(A^{2n+2}x)_i}{(A^{2n}x)_i}$$");
-    } else if (caseType === "TH1" && k >= 6 && detectCaseTH3(history)) {
-      caseType = "TH3";
-      logger.step(
-        "Nhận diện TH3: λ không hội tụ về số thực → dùng phương trình đặc trưng bậc 2.",
-      );
-      logger.formula(
-        "$$(A^{n+2}x)_i - p(A^{n+1}x)_i + q(A^n x)_i = 0 \\implies \\lambda^2 - p\\lambda + q = 0$$",
-      );
+      return {
+        converged: false,
+        caseType: "TH1",
+        lambda: 0,
+        eigenvector: x,
+        k,
+      };
     }
 
-    let lambdaEst: number | null = null;
-    let lambdaSqEst: number | null = null;
-    let deltaLambda: number | null = null;
+    const xNext = y.map((v) => v / mk);
+    const err = infNorm(xNext.map((v, i) => v - x[i]));
 
-    if (caseType === "TH1") {
-      lambdaEst = estimateLambdaTH1(x, y);
-      if (lambdaEst !== null && prevLambda !== null) {
-        deltaLambda = Math.abs(lambdaEst - prevLambda);
-        if (deltaLambda <= epsilon) {
-          converged = true;
-          finalLambda = lambdaEst;
-        }
-      }
-      prevLambda = lambdaEst;
-    } else if (caseType === "TH2" && k % 2 === 0 && k >= 4) {
-      const xEven = vectorSnapshots[k - 2];
-      lambdaSqEst = estimateLambdaSqTH2(xEven, y);
-      lambdaEst = lambdaSqEst !== null ? Math.sqrt(Math.abs(lambdaSqEst)) : null;
-
-      if (lambdaSqEst !== null && prevLambdaSq !== null) {
-        deltaLambda = Math.abs(lambdaSqEst - prevLambdaSq);
-        if (deltaLambda <= epsilon) {
-          converged = true;
-          const sign =
-            history.length > 0 && (history[history.length - 1].lambdaEst ?? 0) < 0 ? -1 : 1;
-          finalLambda = sign * Math.sqrt(Math.abs(lambdaSqEst));
-        }
-      }
-      prevLambdaSq = lambdaSqEst;
-    } else if (caseType === "TH3" && k >= 3) {
-      const vn = vectorSnapshots[k - 2];
-      const vn1 = vectorSnapshots[k - 1];
-      const vn2 = y;
-      const result = estimateLambdaTH3(vn, vn1, vn2);
-      if (result) {
-        lambdaEst = result.lambda.re;
-        const mod = result.lambda.abs();
-        if (prevModulus !== null) {
-          deltaLambda = Math.abs(mod - prevModulus);
-          if (deltaLambda <= epsilon) {
-            converged = true;
-            finalLambda = result.lambda;
-          }
-        }
-        prevModulus = mod;
-      }
-    }
-
-    const xColsK = Object.fromEntries(x.map((_, i) => [`x${i + 1}`, fmt(x[i])]));
-    const lambdaDisplay =
-      caseType === "TH3" && finalLambda instanceof Complex
-        ? finalLambda.toString()
-        : lambdaEst !== null
-          ? fmt(lambdaEst)
-          : lambdaSqEst !== null
-            ? `λ²=${fmt(lambdaSqEst)}`
-            : "—";
-
+    const xCols = Object.fromEntries(
+      xNext.map((_, i) => [`$(x_k)_{${i + 1}}$`, fmt(xNext[i])]),
+    );
     tableData.push({
-      k,
-      ...xColsK,
-      "λ ước lượng": lambdaDisplay,
-      TH: caseType,
-      "‖Δλ‖": deltaLambda !== null ? fmt(deltaLambda) : "—",
+      "$k$": k,
+      ...xCols,
+      "$m_k$": fmt(mk),
+      "$\\|x_k - x_{k-1}\\|_\\infty$": fmt(err),
     });
 
-    history.push({ k, x: [...x], y: [...y], lambdaEst, lambdaSqEst, caseType, deltaLambda });
+    x = xNext;
 
-    if (converged) {
-      x = normalizeInf(y);
+    if (err < epsilon) {
+      converged = true;
       break;
     }
-
-    x = normalizeInf(y);
   }
 
   logger.table(tableData);
+  logger.separator();
 
-  if (!converged && caseType === "TH3" && vectorSnapshots.length >= 3) {
-    const len = vectorSnapshots.length;
-    const result = estimateLambdaTH3(
-      vectorSnapshots[len - 3],
-      vectorSnapshots[len - 2],
-      vectorSnapshots[len - 1],
+  // Bước 2: Xác định kết quả
+  logger.step("**Bước 2: Xác định kết quả**");
+
+  if (converged) {
+    logger.text("- **Trường hợp 1: Một giá trị riêng thực trội duy nhất**\n    - Xảy ra khi dãy $x_k$ hội tụ.");
+    logger.text("- Kết quả:");
+    logger.result(
+      `$$\\lambda_1 = m_{k+1} \\approx ${fmt(mk)}, \\quad v_1 = x_{k+1} \\approx \\begin{bmatrix} ${x.map((v: number) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
     );
-    if (result) finalLambda = result.lambda;
+    return { converged: true, caseType: "TH1", lambda: mk, eigenvector: x, k };
   }
 
+  logger.warn(
+    `Dãy $x_k$ không hội tụ sau ${maxIter} bước — tiến hành xác định trường hợp 2 hoặc 3.`,
+  );
+
+  // Tính các vector chưa chuẩn hóa y_1, y_2 từ điểm neo x cuối cùng
+  const xLast = [...x];
+  const y1 = matVecMul(A, xLast);
+  const y2 = matVecMul(A, y1);
+
+  logger.step("Tính dội lại $y_{k+1}, y_{k+2}$ từ $x_k$ (chưa chuẩn hóa)");
+  logger.formula(
+    `$$y_{k+1} = A x_{k} = \\begin{bmatrix} ${y1.map((v: number) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
+  logger.formula(
+    `$$y_{k+2} = A y_{k+1} = \\begin{bmatrix} ${y2.map((v: number) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
+
+  // Kiểm tra TH2: tỉ số y2_i / xLast_i có bằng nhau không?
+  const ratiosTH2: number[] = [];
+  for (let i = 0; i < xLast.length; i++) {
+    if (Math.abs(xLast[i]) > 1e-6) {
+      ratiosTH2.push(y2[i] / xLast[i]);
+    }
+  }
+
+  if (ratiosTH2.length > 0) {
+    const avgRatio = ratiosTH2.reduce((a, b) => a + b, 0) / ratiosTH2.length;
+    const maxDiff = Math.max(...ratiosTH2.map((r) => Math.abs(r - avgRatio)));
+
+    if (avgRatio > 0 && maxDiff < 0.1 * avgRatio) {
+      logger.text("- **Trường hợp 2: Hai giá trị riêng đối nhau ($\\lambda_1 = -\\lambda_2$)**\n    - Xảy ra khi dãy $x_k$ không hội tụ mà đổi dấu luân phiên.\n    - Lấy 3 véc-tơ lặp liên tiếp chưa chuẩn hóa (tính dội lại $y_{k+1}, y_{k+2}$ từ $x_k$).\n    - Tính $\\lambda_{1}^{2} \\approx \\frac{(y_{k+2})_i}{(x_k)_i}$ (với thành phần $i$ bất kỳ khác 0).");
+      logger.formula(
+        `$$\\lambda_1^2 \\approx \\frac{(y_{k+2})_i}{(x_k)_i} \\approx ${fmt(avgRatio)}$$`,
+      );
+      const lam = Math.sqrt(avgRatio);
+      logger.text("- Suy ra $\\lambda_1$ và $\\lambda_2 = -\\lambda_1$:");
+      logger.result(
+        `$$\\lambda_1 \\approx ${fmt(lam)}, \\quad \\lambda_2 = -\\lambda_1 \\approx -${fmt(lam)}$$`,
+      );
+      return {
+        converged: false,
+        caseType: "TH2",
+        lambda: lam,
+        eigenvector: x,
+        k,
+      };
+    }
+  }
+
+  // TH3
+  logger.text("- **Trường hợp 3: Hai giá trị riêng phức liên hợp ($\\lambda_1 = \\overline{\\lambda_2}$)**\n    - Xảy ra khi dãy không hội tụ và không có quy luật đổi dấu.\n    - Dựa vào 3 véc-tơ lặp liên tiếp $x_k, y_{k+1}, y_{k+2}$ để giải phương trình đặc trưng $t^2 - pt + q = 0$ thông qua định thức (với 2 thành phần $i, j$ bất kỳ):");
+
+  // Chọn 2 chỉ số i, j có trị tuyệt đối lớn nhất trong xLast
+  const indices = xLast
+    .map((_, idx) => idx)
+    .sort((a, b) => Math.abs(xLast[b]) - Math.abs(xLast[a]));
+
+  if (indices.length < 2) {
+    logger.error("Không đủ chiều (n < 2) để kiểm tra giá trị phức.");
+    return {
+      converged: false,
+      caseType: "TH3",
+      lambda: null,
+      eigenvector: x,
+      k,
+    };
+  }
+
+  const i = indices[0];
+  const j = indices[1];
+
+  logger.text(
+    `Chọn 2 thành phần $i = ${i + 1}$, $j = ${j + 1}$ có trị tuyệt đối lớn nhất (giảm sai số số học):`,
+  );
+
+  const c1 = xLast[i],
+    b1 = y1[i],
+    a1 = y2[i];
+  const c2 = xLast[j],
+    b2 = y1[j],
+    a2 = y2[j];
+
+  logger.formula(
+    `$$\\begin{vmatrix} \\lambda^2 & \\lambda & 1 \\\\ ${fmt(a1)} & ${fmt(b1)} & ${fmt(c1)} \\\\ ${fmt(a2)} & ${fmt(b2)} & ${fmt(c2)} \\end{vmatrix} = 0$$`,
+  );
+
+  const det = b1 * c2 - b2 * c1;
+  if (Math.abs(det) < 1e-12) {
+    logger.error("Định thức hệ phụ xấp xỉ 0. Không thể giải tiếp TH3.");
+    return {
+      converged: false,
+      caseType: "TH3",
+      lambda: null,
+      eigenvector: x,
+      k,
+    };
+  }
+
+  const p = (a1 * c2 - a2 * c1) / det;
+  const q = (a1 * b2 - a2 * b1) / det;
+
+  logger.formula(`Khai triển: $$t^2 - (${fmt(p)})t + (${fmt(q)}) = 0$$`);
+
+  const [r1, r2] = solveQuadratic(p, q);
+  logger.text("- Giải phương trình bậc 2 thu được cặp giá trị riêng phức.");
+  const dominant = pickDominantRoot(r1, r2);
+
   return {
-    converged,
-    caseType,
-    lambda: finalLambda ?? prevLambda,
+    converged: false,
+    caseType: "TH3",
+    lambda: dominant,
     eigenvector: x,
     k,
   };
@@ -386,7 +334,10 @@ export function powerIteration(
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function runPowerEigen(params: Record<string, string>, logger: Logger): void {
+export function runPowerEigen(
+  params: Record<string, string>,
+  logger: Logger,
+): void {
   const { matA, x0Str, epsilon, maxIter: maxIterStr } = params;
 
   let A: NumMatrix;
@@ -416,7 +367,7 @@ export function runPowerEigen(params: Record<string, string>, logger: Logger): v
     logger.error(`x₀ phải có đúng ${n} phần tử.`);
     return;
   }
-  if (infNorm(x0) < RATIO_TOL) {
+  if (infNorm(x0) < 1e-15) {
     logger.error("x₀ phải khác vector không (x ≠ 0).");
     return;
   }
@@ -429,58 +380,18 @@ export function runPowerEigen(params: Record<string, string>, logger: Logger): v
     return;
   }
 
-  logger.section("MA TRẬN ĐẦU VÀO");
-  logger.info(`Kích thước: ${n} × ${n}`);
-  logger.text("Ma trận A:");
-  logger.table(formatMatrixForLog(A));
-  logger.info(`$$x^{(0)} = \\begin{bmatrix} ${x0.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
-  logger.info(`$$\\varepsilon = ${eps}, N = ${maxIter}$$`);
-
-  logger.section("Ý TƯỞNG PHƯƠNG PHÁP");
-  logger.formula("$$A^k x = a_1 \\lambda_1^k v_1 + a_2 \\lambda_2^k v_2 + \\dots + a_s \\lambda_s^k v_s$$");
-  logger.formula("TH1 ($|\\lambda_1| > |\\lambda_2|$): $$\\lambda_1 \\approx \\frac{(A^{k+1}x)_i}{(A^k x)_i}$$");
-  logger.formula("TH2 ($\\lambda_1 = -\\lambda_2$): $$\\lambda_1^2 \\approx \\frac{(A^{2n+2}x)_i}{(A^{2n}x)_i}$$");
-  logger.formula("TH3 ($\\lambda_1 = \\bar{\\lambda}_2$): $$\\lambda^2 - p\\lambda + q = 0$$ từ 3 bước liên tiếp");
-  logger.text("Tỷ số tính trước khi chuẩn hóa vector (‖·‖∞) để tránh tràn số.");
+  logger.section("THÔNG TIN ĐẦU VÀO / ĐẦU RA");
+  logger.text("- **Đầu vào:** Ma trận vuông $A \\in \\mathbb{R}^{n \\times n}$, véc-tơ khởi tạo $x_0 \\ne 0$, sai số cho phép $\\epsilon$.");
+  logger.text("- **Đầu ra:** Giá trị riêng trội $\\lambda$ và véc-tơ riêng $v$.");
+  logger.info(`Ma trận $A$ kích thước ${n} \\times ${n}`);
+  logger.formula(
+    `$$A = \\begin{bmatrix} ${A.map((row) => row.map((v) => fmt(v)).join(" & ")).join(" \\\\ ")} \\end{bmatrix}$$`,
+  );
+  logger.formula(
+    `$$x_0 = \\begin{bmatrix} ${x0.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+  );
+  logger.info(`$$\\epsilon = ${eps}, N_{\\max} = ${maxIter}$$`);
 
   logger.section("QUÁ TRÌNH LẶP");
-
-  const { converged, caseType, lambda, eigenvector, k } = powerIteration(
-    A,
-    x0,
-    eps,
-    maxIter,
-    logger,
-  );
-
-  logger.separator();
-  logger.text(`Ngưỡng dừng $$\\varepsilon = ${eps}$$`);
-
-  logger.section("KẾT QUẢ");
-
-  if (converged && lambda !== null) {
-    logger.success(`✔ Hội tụ tại bước k = ${k} (${caseType}).`);
-
-    if (lambda instanceof Complex) {
-      logger.result(`Giá trị riêng trội: $$\\lambda_1 \\approx ${lambda.toString()}$$`);
-      logger.info(`|λ₁| ≈ ${fmt(lambda.abs())}`);
-      logger.result(`Vector riêng (xấp xỉ, đã chuẩn hóa): $$v_1 \\approx \\begin{bmatrix} ${eigenvector.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
-    } else {
-      logger.result(`Giá trị riêng trội: $$\\lambda_1 \\approx ${fmt(lambda)}$$`);
-      logger.result(`Vector riêng (xấp xỉ, đã chuẩn hóa): $$v_1 \\approx \\begin{bmatrix} ${eigenvector.map(v=>fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
-    }
-  } else if (lambda !== null) {
-    logger.warn(`⚠ Chưa đạt ε sau ${maxIter} bước lặp — kết quả xấp xỉ cuối (${caseType}).`);
-    if (lambda instanceof Complex) {
-      logger.result(`$$\\lambda_1 \\approx ${lambda.toString()} \\quad (|\\lambda_1| \\approx ${fmt(lambda.abs())})$$`);
-    } else {
-      logger.result(`$$\\lambda_1 \\approx ${fmt(lambda)}$$`);
-    }
-    logger.text(`Vector: ${formatVec(eigenvector)}`);
-  } else {
-    logger.warn(`⚠ Không hội tụ sau ${maxIter} bước lặp.`);
-    logger.text(
-      "Gợi ý: thử vector ban đầu khác (tránh a₁ = 0 trong khai triển x = Σ aᵢvᵢ).",
-    );
-  }
+  powerIteration(A, x0, eps, maxIter, logger);
 }
