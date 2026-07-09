@@ -115,9 +115,36 @@ function FormFields({
       return <SvdMatrixFields method={method} />;
     case "gram-schmidt":
       return <GramSchmidtFields />;
+    case "vien-quanh":
+      return <VienQuanhFields />;
     default:
       return null;
   }
+}
+
+function VienQuanhFields() {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông A (mỗi hàng một dòng, các giá trị cách nhau bằng khoảng trắng hoặc phẩy).
+        <br />
+        Dùng cho phương pháp viền quanh tìm ma trận nghịch đảo.
+      </div>
+      <div className="form-section-title">Ma trận A</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">
+          Ma trận vuông A (n × n)
+        </label>
+        <textarea
+          className="form-textarea"
+          id="in-matA"
+          name="matA"
+          rows={6}
+          spellCheck={false}
+        />
+      </div>
+    </>
+  );
 }
 
 function BisectionFields({ onKeyDown }: FieldProps) {

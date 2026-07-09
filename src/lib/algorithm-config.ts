@@ -20,6 +20,7 @@ import { runSvdPower } from "@/lib/algorithms/svd-power";
 import { runPseudoinverse } from "@/lib/algorithms/pseudoinverse";
 import { runConditionNumber } from "@/lib/algorithms/condition-number";
 import { runGramSchmidt } from "@/lib/algorithms/gram-schmidt";
+import { runVienQuanh } from "@/lib/algorithms/vien-quanh";
 import type { AlgoConfig, AlgorithmKey, Logger } from "@/types/solver";
 
 export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
@@ -272,6 +273,15 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     },
     run: runGramSchmidt,
   },
+  "vien-quanh": {
+    title: "Nghịch Đảo Viền Quanh",
+    subtitle: "Tìm ma trận nghịch đảo $A^{-1}$ — Bordering Method",
+    icon: "[ ]\u207B\u00B9",
+    defaultValues: {
+      matA: "0 -5 -8 -5 -1 -4\n10 0 -7 9 -3 5\n-3 4 -5 -3 7 5\n2 8 7 -6 2 -3\n-6 10 -5 -5 1 1\n5 1 7 2 9 -9",
+    },
+    run: runVienQuanh,
+  },
 };
 
 export const SIDEBAR_SECTIONS = [
@@ -288,6 +298,7 @@ export const SIDEBAR_SECTIONS = [
       "lu-solve",
       "cholesky-decompose",
       "cholesky-solve",
+      "vien-quanh",
     ] as AlgorithmKey[],
   },
   {

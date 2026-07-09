@@ -38,7 +38,8 @@ export type AlgorithmKey =
   | "svd-power"
   | "pseudoinverse"
   | "condition-number"
-  | "gram-schmidt";
+  | "gram-schmidt"
+  | "vien-quanh";
 
 export interface AlgoConfig {
   title: string;
