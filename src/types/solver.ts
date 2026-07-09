@@ -24,6 +24,7 @@ export type AlgorithmKey =
   | "gauss"
   | "gaussjordan"
   | "gauss-seidel"
+  | "jacobi-matrix"
   | "newton-system"
   | "lapdon-system"
   | "danilevsky"
@@ -72,6 +73,7 @@ export const LINEAR_SYSTEM_METHODS = [
   "gauss",
   "gaussjordan",
   "gauss-seidel",
+  "jacobi-matrix",
   "lu-decompose",
   "lu-solve",
   "cholesky-decompose",

@@ -84,6 +84,8 @@ function FormFields({
       return <GaussJordanFields />;
     case "gauss-seidel":
       return <GaussSeidelFields onKeyDown={onKeyDown} />;
+    case "jacobi-matrix":
+      return <JacobiMatrixFields onKeyDown={onKeyDown} />;
     case "lu-decompose":
       return <LuDecomposeFields />;
     case "lu-solve":
@@ -582,6 +584,72 @@ function GaussSeidelFields({ onKeyDown }: FieldProps) {
             type="number"
             min="1"
             step="1"
+            onKeyDown={onKeyDown}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function JacobiMatrixFields({ onKeyDown }: FieldProps) {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và vector b (mỗi dòng một giá trị).
+      </div>
+      <div className="form-section-title">Ma trận A (hệ số)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-matA">
+          Ma trận A (n × n)
+        </label>
+        <textarea
+          className="form-textarea"
+          id="in-matA"
+          name="matA"
+          rows={4}
+          spellCheck={false}
+        />
+      </div>
+      <div className="form-section-title">Vector b (vế phải)</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-vecB">
+          Vector b (mỗi dòng 1 giá trị)
+        </label>
+        <textarea
+          className="form-textarea"
+          id="in-vecB"
+          name="vecB"
+          rows={4}
+          spellCheck={false}
+        />
+      </div>
+      <div className="form-section-title">Tham số lặp</div>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-eps">
+            Sai số <code>ε</code>
+          </label>
+          <input
+            className="form-input"
+            id="in-eps"
+            name="epsilon"
+            type="text"
+            onKeyDown={onKeyDown}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-maxIterStr">
+            Số lặp tối đa <code>N</code>
+          </label>
+          <input
+            className="form-input"
+            id="in-maxIterStr"
+            name="maxIterStr"
+            type="number"
+            min="1"
+            step="1"
+            defaultValue="100"
             onKeyDown={onKeyDown}
           />
         </div>

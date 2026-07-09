@@ -124,27 +124,14 @@ function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
   });
 }
 
-/** Mô tả dạng Frobenius mục tiêu của hàng k: [0, ..., 0, 1, 0] */
-function describeFrobeniusTargetRow(rowIndex: number, n: number): string {
-  const parts = Array.from({ length: n }, (_, j) =>
-    j === rowIndex - 1 ? "1" : "0",
-  );
-  return `[${parts.join(", ")}]`;
-}
-
-/** In một hàng ma trận dạng [a₁, a₂, ..., aₙ] */
-function formatMatrixRow(row: number[]): string {
-  return `[${row.map(formatNum).join(", ")}]`;
-}
-
 /** Log ma trận P sau mỗi lần cập nhật tích lũy */
 function logTransformMatrixAfterUpdate(
   logger: Logger,
   formula: string,
   p: NumMatrix,
 ) {
-  logger.formula(formula);
-  logger.info("Ma trận chuyển cơ sở P (sau cập nhật):");
+  logger.formula(`$$${formula}$$`);
+  logger.text("- Ma trận chuyển cơ sở $P$ (sau cập nhật):");
   logger.table(formatMatrixForLog(p));
 }
 
@@ -396,11 +383,12 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
     }
   }
 
-  logger.section("BƯỚC 1: KHỞI TẠO");
-  logger.info(`Input: Ma trận vuông A cấp n = ${n}.`);
-  logger.info(`Gán k = n = ${n}. Khởi tạo P_out(λ) = 1.`);
-  logger.info(`Khởi tạo ma trận chuyển cơ sở tích lũy P = I_${n}:`);
-  logger.info("Ma trận A:");
+  logger.section("Phương pháp Danilevsky");
+  logger.step("**Bước 1: Khởi tạo**");
+  logger.text(`- Input: Ma trận vuông $A \\in \\mathbb{R}^{${n} \\times ${n}}$.`);
+  logger.text(`- Gán $k = n = ${n}$. Khởi tạo $P_{out}(\\lambda) = 1$.`);
+  logger.text(`- Khởi tạo ma trận chuyển cơ sở tích lũy $P = I_{${n}}$.`);
+  logger.text("- Ma trận $A$:");
   logger.table(formatMatrixForLog(matrixA));
 
   // Bước 2 (BT.md): lặp khi k > 1
@@ -412,17 +400,15 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
   const scalarSplits: ScalarSplit[] = [];
   let activeSize = n;
   let rowIndex = activeSize - 1;
-  let loopCount = 0;
 
   while (activeSize > 1 && rowIndex >= 1) {
-    loopCount++;
     const k = activeSize;
     const pivot = matrixA[rowIndex][rowIndex - 1];
 
     logger.separator();
-    logger.step(`Bước 2 — Vòng lặp lần ${loopCount} (k = ${k})`);
-    logger.info(
-      `Xét hàng ${k}, phần tử sát đường chéo $$a_{${k},${k - 1}} = ${formatNum(pivot)}$$.`,
+    logger.step(`**Bước 2: Vòng lặp (k = ${k})**`);
+    logger.text(
+      `- Xét hàng $k = ${k}$, phần tử sát đường chéo $a_{${k},${k - 1}} = ${formatNum(pivot)}$.`,
     );
 
     if (Math.abs(pivot) < EPS) {
@@ -436,80 +422,63 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
 
       if (swapCol !== -1) {
         // TH1
-        logger.info(
-          `Trường hợp 1: $$a_{${k},${k - 1}} = 0$$ và tồn tại $$a_{${k},${swapCol + 1}} \\neq 0$$.`,
+        logger.text(
+          `- **Trường hợp 1:** $a_{${k},${k - 1}} = 0$ và tồn tại cột $s = ${swapCol + 1} < k-1$ thỏa mãn $a_{${k},${swapCol + 1}} \\neq 0$.`,
         );
-        logger.step(
-          `[Hàng ${rowIndex + 1}] a(${rowIndex + 1},${rowIndex}) = 0 nhưng có a(${rowIndex + 1},${swapCol + 1}) ≠ 0. TH1: Hoán vị.`,
-        );
-        logger.info(
-          `1. Lập ma trận hoán vị C_{${swapCol + 1} ↔ ${k - 1}}: đổi chỗ cột/hàng ${swapCol + 1} và ${k - 1}.`,
+        logger.text(
+          `  - Lập ma trận hoán vị $C$ (đổi chỗ cột ${swapCol + 1} và cột ${k - 1} của $I_{${k}}$).`,
         );
 
         const permutation = buildPermutationMatrix(n, swapCol, rowIndex - 1);
         logger.table(formatMatrixForLog(permutation));
 
-        logger.info("2. Biến đổi đồng dạng: A ← C · A · C");
+        logger.text("  - Biến đổi đồng dạng: $A \\leftarrow C A C$, $P \\leftarrow P C$");
         swapRowsAndCols(matrixA, swapCol, rowIndex - 1);
         transformMatrix = multiplyMatrices(transformMatrix, permutation);
         const factorLabel = `C_{${swapCol + 1} ↔ ${k - 1}}`;
         pFactorHistory.push(factorLabel);
 
-        logger.info("Ma trận A sau hoán vị:");
+        logger.text("  - Ma trận $A$ sau hoán vị:");
         logger.table(formatMatrixForLog(matrixA));
 
-        logger.info("3. Cập nhật ma trận chuyển cơ sở tích lũy:");
         logTransformMatrixAfterUpdate(
           logger,
-          `P_mới = P_cũ · ${factorLabel}`,
+          `P \\leftarrow P \\cdot ${factorLabel}`,
           transformMatrix,
         );
-        logger.info("→ Chuyển sang xử lý Trường hợp 2 (không hạ cấp k).");
+        logger.text("  - Chuyển sang Trường hợp 2 (không hạ cấp $k$).");
         continue;
       }
 
       // TH3
       const eigenvalue = matrixA[rowIndex][rowIndex];
-      logger.info(
-        `Trường hợp 3: $$a_{${k},j} = 0$$ với mọi $$j \\le ${k - 1}$$ — hàng ${k} đã đạt dạng Frobenius cấp 1.`,
-      );
-      logger.step(
-        `[Hàng ${rowIndex + 1}] Toàn bộ phần tử bên trái đường chéo đều bằng 0. TH3: Giảm bậc khối.`,
+      logger.text(
+        `- **Trường hợp 3:** $a_{${k},j} = 0, \\forall j \\le ${k - 1}$.`,
       );
       logger.formula(
-        `A phân rã: $$A_{${k}} = \\begin{bmatrix} A_{${k - 1}} & \\square \\\\ 0 & a_{${k}${k}} \\end{bmatrix}$$`,
+        `A phân rã: $$A_{${k}} = \\begin{bmatrix} A_{${k - 1}} & \\square \\\\ 0 & a_{${k}${k}} \\end{bmatrix}$$`
       );
-      logger.info(
-        `Bóc tách trị riêng độc lập: λ = a_{${k},${k}} = ${formatNum(eigenvalue)}.`,
-      );
+      logger.text(`  - Cập nhật $P_{out}(\\lambda) \\leftarrow P_{out}(\\lambda) \\cdot (a_{${k}${k}} - \\lambda)$. Bóc tách trị riêng độc lập: $\\lambda = a_{${k},${k}} = ${formatNum(eigenvalue)}$.`);
       logger.formula(
-        `Cập nhật đa thức tích lũy: $$P_{out}(\\lambda) \\leftarrow P_{out}(\\lambda) \\cdot (${formatNum(eigenvalue)} - \\lambda)$$`,
-      );
-      logger.formula(
-        `Đa thức tích lũy có thêm nhân tử: $$(${eigenvalue.toFixed(4)} - \\lambda)$$`,
+        `$$P_{out}(\\lambda) \\leftarrow P_{out}(\\lambda) \\cdot (${formatNum(eigenvalue)} - \\lambda)$$`
       );
 
       accumulatedPoly = multiplyPolynomials(accumulatedPoly, [-1, eigenvalue]);
       scalarSplits.push({ rowIndex, eigenvalue });
 
-      logger.info(
-        `Thu gọn ma trận con cấp ${k - 1} (bỏ hàng/cột ${k}), gán k ← ${k - 1}.`,
+      logger.text(
+        `  - Xóa hàng ${k} và cột ${k} của $A$. Thu gọn ma trận con cấp ${k - 1}.`,
       );
+      logger.text(`  - Hạ cấp: $k \\leftarrow ${k - 1}$. Lặp Bước 2.`);
       activeSize = rowIndex;
       rowIndex = activeSize - 1;
       continue;
     }
 
     // TH2
-    logger.info(`Trường hợp 2: a_{${k},${k - 1}} = ${formatNum(pivot)} ≠ 0.`);
-    logger.step(
-      `[Hàng ${rowIndex + 1}] Chọn phần tử kề chéo a(${rowIndex + 1},${rowIndex}) = ${pivot.toFixed(4)}. TH2: Khử Frobenius.`,
-    );
-    logger.info(
-      `Hàng ${k} hiện tại: ${formatMatrixRow(matrixA[rowIndex])}, phần tử chia a_{${k},${k - 1}} = ${formatNum(pivot)}.`,
-    );
-    logger.info(
-      `1. Lập ma trận khử M: thay hàng ${k - 1} của I_${n} bằng hàng ${k} của A.`,
+    logger.text(`- **Trường hợp 2:** $a_{${k},${k - 1}} = ${formatNum(pivot)} \\neq 0$.`);
+    logger.text(
+      `  - Lập ma trận khử $M$: Thay hàng ${k - 1} của $I_{${k}}$ bằng hàng ${k} của $A$.`,
     );
 
     const { eliminationMatrix, inverseMatrix } = buildEliminationMatrices(
@@ -519,12 +488,12 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
     );
     logger.table(formatMatrixForLog(eliminationMatrix));
 
-    logger.info(
-      `2. Lập ma trận nghịch đảo M⁻¹ (chia hàng ${k - 1} cho a_{${k},${k - 1}}):`,
+    logger.text(
+      `  - Lập ma trận nghịch đảo $M^{-1}$:`,
     );
     logger.table(formatMatrixForLog(inverseMatrix));
 
-    logger.info("3. Biến đổi đồng dạng: A ← M · A · M⁻¹");
+    logger.text("  - $A \\leftarrow M A M^{-1}$, $P \\leftarrow P M^{-1}$.");
     matrixA = applySimilarityTransform(
       matrixA,
       eliminationMatrix,
@@ -532,31 +501,27 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
     );
 
     transformMatrix = multiplyMatrices(transformMatrix, inverseMatrix);
-    const factorLabel = `M⁻¹_k=${k}`;
+    const factorLabel = `M^{-1}_{k=${k}}`;
     pFactorHistory.push(factorLabel);
 
-    logger.info(
-      `   Hàng ${k} đạt dạng Frobenius ${describeFrobeniusTargetRow(rowIndex, n)}.`,
-    );
-    logger.info("Ma trận A sau biến đổi:");
+    logger.text("  - Ma trận $A$ sau biến đổi:");
     logger.table(formatMatrixForLog(matrixA));
 
-    logger.info("4. Cập nhật ma trận chuyển cơ sở tích lũy:");
-    logTransformMatrixAfterUpdate(logger, "P_mới = P_cũ · M⁻¹", transformMatrix);
+    logTransformMatrixAfterUpdate(logger, `P \\leftarrow P \\cdot M^{-1}`, transformMatrix);
 
     const newK = k - 1;
-    logger.info(`5. Hạ cấp: k ← ${newK}.`);
+    logger.text(`  - $k \\leftarrow ${newK}$. Lặp Bước 2.`);
     rowIndex--;
   }
 
   logger.separator();
-  logger.section("BƯỚC 3: TRÍCH XUẤT KẾT QUẢ");
+  logger.step("**Bước 3: Trích xuất đa thức đặc trưng**");
   const frobeniusView = matrixA
     .slice(0, activeSize)
     .map((row) => row.slice(0, activeSize));
 
-  logger.info(
-    `Vòng lặp dừng (k = 1). Ma trận đạt dạng chuẩn Frobenius F cấp m = ${activeSize}:`,
+  logger.text(
+    `- Thu được khối Frobenius cấp $m = ${activeSize}$:`,
   );
   logger.table(formatMatrixForLog(frobeniusView));
 
@@ -568,25 +533,26 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
 
   if (activeSize >= 1) {
     const negCoeffs = frobeniusView[0].map(formatNum).join(", ");
-    logger.info(
-      `Trích hệ số hàng 1 của F: [-p₁, -p₂, ..., -p_${activeSize}] = [${negCoeffs}]`,
+    logger.text(
+      `- Trích hàng 1: $\\begin{bmatrix} -p_1 & -p_2 & \\dots & -p_m \\end{bmatrix} = \\begin{bmatrix} ${negCoeffs} \\end{bmatrix}$.`,
     );
     const pList = frobeniusPoly
       .slice(1)
       .map((p, i) => `p_${i + 1} = ${formatNum(p)}`)
-      .join(", ");
+      .join(",\\quad ");
     logger.formula(`Suy ra: $$${pList}$$`);
+    logger.text(`- $P_F(\\lambda) = (-1)^m [\\lambda^m + p_1\\lambda^{m-1} + \\dots + p_m]$`);
     logger.formula(
-      `$$P_F(\\lambda) = ${formatCharacteristicPolynomial(frobeniusPoly, activeSize)}$$`,
+      `$$P_F(\\lambda) = ${formatCharacteristicPolynomial(frobeniusPoly, activeSize)}$$`
     );
   }
 
   if (scalarSplits.length > 0) {
     const factors = scalarSplits
-      .map((s) => `(${formatNum(s.eigenvalue)} - λ)`)
-      .join(" · ");
-    logger.info(`P_out(λ) = ${factors}`);
-    logger.formula(`$$P(\\lambda) = P_{out}(\\lambda) \\cdot P_F(\\lambda)$$`);
+      .map((s) => `(${formatNum(s.eigenvalue)} - \\lambda)`)
+      .join(" \\cdot ");
+    logger.text(`- Đa thức $P_{out}(\\lambda) = ${factors}$`);
+    logger.text(`- $P(\\lambda) = P_{out}(\\lambda) \\cdot P_F(\\lambda)$`);
   }
 
   const polyStr = formatCharacteristicPolynomial(characteristicPoly, n);
@@ -598,15 +564,15 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
   );
 
   logger.separator();
-  logger.section("MA TRẬN CHUYỂN CƠ SỞ P");
-  logger.info(
-    "P là ma trận tích lũy các phép biến đổi đồng dạng (hoán vị C, khử M⁻¹) trong quá trình Danilevsky.",
+  logger.step("**Bước 4: Xác định véc-tơ riêng (Nếu cần)**");
+  logger.text(
+    "- Ma trận $P$ là ma trận tích lũy các phép biến đổi đồng dạng trong quá trình Danilevsky.",
   );
   logger.formula(`$$P = ${pFactorHistory.join(" \\cdot ")}$$`);
   logger.info(
     "Quan hệ: A ∼ F (đồng dạng). Vector riêng chuẩn u trong hệ Frobenius được đưa về hệ gốc bằng v = P · u.",
   );
-  logger.info("Ma trận P cuối cùng:");
+  logger.text("- Ma trận $P$ cuối cùng:");
   logger.table(formatMatrixForLog(transformMatrix));
 
   const frobeniusRoots = findPolynomialRoots(frobeniusPoly);
@@ -618,20 +584,16 @@ export function runDanilevsky(params: Record<string, string>, logger: Logger) {
     ...frobeniusRoots.map((value) => ({ value })),
   ];
 
-  logger.separator();
-  logger.section("GIÁ TRỊ RIÊNG");
-  logger.info("Giải phương trình P(λ) = 0 (phương pháp Durand-Kerner):");
-  logger.success(`✔ Tìm được ${allRoots.length} giá trị riêng (nghiệm):`);
+  logger.text("- Giải $P(\\lambda) = 0$ tìm $\\lambda_i$:");
+  logger.success(`Tìm được ${allRoots.length} giá trị riêng (nghiệm):`);
   allRoots.forEach((root, idx) => {
-    logger.info(`  λ${idx + 1} = ${root.value.toString(4)}`);
+    logger.text(`  $\\lambda_{${idx + 1}} = ${root.value.toString(4)}$`);
   });
 
-  logger.separator();
-  logger.section("VECTOR RIÊNG");
-  logger.info(
-    "Vector riêng chuẩn trong hệ tọa độ Frobenius: u = [λ^{m-1}, ..., λ, 1]ᵀ (TH3: e_k).",
+  logger.text(
+    "- Lập véc-tơ riêng chuẩn trong hệ Frobenius: $u = \\begin{bmatrix} \\lambda_i^{m-1} & \\dots & \\lambda_i & 1 \\end{bmatrix}^T$.",
   );
-  logger.formula("Áp dụng ma trận $P$ ở trên: $$v = P \\cdot u$$");
+  logger.text("- Véc-tơ riêng gốc: $v = P \\cdot u$");
   allRoots.forEach((root, idx) => {
     const standardVector = buildStandardEigenvector(
       n,

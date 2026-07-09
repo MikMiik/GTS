@@ -101,14 +101,21 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
   const fmtVec = (v: number[]) => `[${v.map((vi) => fmt(vi, tableDecimals)).join(", ")}]`;
 
   // 5. Log initial info
-  logger.section("THÔNG TIN KHỞI ĐẦU");
-  logger.info(`$$X^{(0)} = \\begin{bmatrix} ${x0Arr.join(" & ")} \\end{bmatrix}^T$$`);
-  logger.info(`$$q = ${q},\\ \\varepsilon = ${eps.toExponential(4)},\\ \\varepsilon_0 = \\frac{1-q}{q}\\varepsilon = ${eps0.toExponential(4)}$$`);
-  logger.formula("Công thức: $$X^{(k+1)} = \\Phi(X^{(k)})$$");
-  logger.formula("Điều kiện dừng: $$\\left\\| X^{(k)} - X^{(k-1)} \\right\\|_\\infty < \\varepsilon_0$$");
+  logger.section("Phương pháp Lặp đơn giải hệ phi tuyến");
+  logger.step("**Bước 1 & 2: Thiết lập hệ lặp và hệ số co**");
+  logger.text(`- Véc-tơ khởi tạo: $X^{(0)} = \\begin{bmatrix} ${x0Arr.join(" & ")} \\end{bmatrix}^T$`);
+  logger.text(`- Hệ số co (người dùng cung cấp): $q = ${q}$`);
+  logger.text(`- Sai số yêu cầu: $\\varepsilon = ${eps.toExponential(4)}$`);
+  logger.text(`- Sai số ngưỡng: $\\varepsilon_0 = \\frac{1-q}{q}\\varepsilon = ${eps0.toExponential(4)}$`);
+  
+  logger.step("**Bước 3: Công thức lặp**");
+  logger.formula("Dãy lặp xấp xỉ nghiệm: $$X^{(k+1)} = \\Phi(X^{(k)})$$");
+  
+  logger.step("**Bước 4: Điều kiện dừng**");
+  logger.formula("Kiểm tra theo chuẩn vô cùng: $$\\frac{q}{1-q}\\left\\| X^{(k)} - X^{(k-1)} \\right\\|_\\infty < \\varepsilon \\iff \\left\\| X^{(k)} - X^{(k-1)} \\right\\|_\\infty < \\varepsilon_0$$");
 
   // 6. Fixed-point iteration
-  logger.section("QUÁ TRÌNH LẶP");
+  logger.separator();
   const tableData: Record<string, unknown>[] = [{ k: 0, "X_k": fmtVec(x0Arr), "||ΔX||∞": "—" }];
 
   let X_prev = [...x0Arr];
@@ -139,18 +146,18 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
 
   logger.table(tableData);
   logger.separator();
-  logger.text(`Ngưỡng dừng $$\\varepsilon_0 = ${eps0.toExponential(4)}$$`);
+  logger.text(`Ngưỡng dừng: $$\\varepsilon_0 = ${eps0.toExponential(4)}$$`);
 
   if (maxDiff < eps0) {
-    logger.success(`✔ Thỏa mãn điều kiện dừng tại bước k = ${step}.`);
+    logger.success(`Thỏa mãn điều kiện dừng tại bước $k = ${step}$.`);
     const XR = X_curr.map((v) => rnd(v, reliableDigits));
     logger.result(
       `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$X \\approx \\begin{bmatrix} ${XR.join(" & ")} \\end{bmatrix}^T$$`
     );
   } else {
-    logger.warn(`⚠ Thuật toán không hội tụ sau ${maxIter} vòng lặp.`);
+    logger.warn(`Thuật toán không hội tụ sau ${maxIter} vòng lặp.`);
     logger.text(
-      `Kết quả cuối: $$X = \\begin{bmatrix} ${X_curr.map((v) => fmt(v, tableDecimals)).join(" & ")} \\end{bmatrix}^T$$`
+      `- Kết quả cuối: $$X = \\begin{bmatrix} ${X_curr.map((v) => fmt(v, tableDecimals)).join(" & ")} \\end{bmatrix}^T$$`
     );
   }
 }

@@ -8,6 +8,7 @@ import { runNewtonSystem } from "@/lib/algorithms/newton-system";
 import { runLapDonSystem } from "@/lib/algorithms/lapdon-system";
 import { runDanilevsky } from "@/lib/algorithms/danilevsky";
 import { runGaussSeidel } from "@/lib/algorithms/gauss-seidel";
+import { runJacobiMatrix } from "@/lib/algorithms/jacobi-matrix";
 import { runPowerEigen } from "@/lib/algorithms/power-eigen";
 import { runLuDecompose } from "@/lib/algorithms/lu-decompose";
 import { runLuSolve } from "@/lib/algorithms/lu-solve";
@@ -104,6 +105,18 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
       maxIter: "100",
     },
     run: runGaussSeidel,
+  },
+  "jacobi-matrix": {
+    title: "Phương Pháp Lặp Jacobi (Ma Trận)",
+    subtitle: "Lặp Jacobi giải hệ phương trình tuyến tính",
+    icon: "⇆",
+    defaultValues: {
+      matA: "5 -1 1\n2 8 -1\n-1 1 4",
+      vecB: "10\n11\n3",
+      epsilon: "1e-3",
+      maxIterStr: "100",
+    },
+    run: runJacobiMatrix,
   },
   "newton-system": {
     title: "Newton Hệ Phi Tuyến",
@@ -256,6 +269,7 @@ export const SIDEBAR_SECTIONS = [
       "gauss",
       "gaussjordan",
       "gauss-seidel",
+      "jacobi-matrix",
       "lu-decompose",
       "lu-solve",
       "cholesky-decompose",
