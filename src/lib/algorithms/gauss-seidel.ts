@@ -1,9 +1,9 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
 
 type NumMatrix = number[][];
 
-const TABLE_DECIMALS = 4;
+let currentDecimals = 5;
 
 // ---------------------------------------------------------------------------
 // Parse đầu vào
@@ -60,7 +60,7 @@ function parseVector(text: string): number[] {
 // Định dạng số
 // ---------------------------------------------------------------------------
 
-function fmt(v: number, d = TABLE_DECIMALS): string {
+function fmt(v: number, d = currentDecimals): string {
   if (!Number.isFinite(v)) return String(v);
   if (Math.abs(v) < 1e-15) return "0";
   return v.toFixed(d);
@@ -164,6 +164,7 @@ function gaussSeidelIterate(
   epsPrime: number,
   maxIter: number,
   invDiag: number[],
+  hasEpsilon: boolean,
   logger: Logger,
 ): { converged: boolean; k: number; x: number[]; delta: number } {
   const n = A.length;
@@ -201,7 +202,7 @@ function gaussSeidelIterate(
       "‖ΔX‖∞": fmt(delta),
     });
 
-    if (delta <= epsPrime) {
+    if (hasEpsilon && delta <= epsPrime) {
       logger.table(tableData);
       return { converged: true, k, x: [...xCurr], delta };
     }
@@ -243,8 +244,21 @@ export function runGaussSeidel(
     return;
   }
 
-  const eps = parseFloat(epsilon);
   const maxIter = parseInt(maxIterStr, 10);
+  
+  const hasEpsilon = epsilon !== undefined && epsilon.trim() !== "";
+  let eps = 0;
+  if (hasEpsilon) {
+    eps = parseFloat(epsilon);
+    if (isNaN(eps) || eps <= 0) {
+      logger.error("ε phải là số dương.");
+      return;
+    }
+    const prec = getPrecisionByEpsilon(eps);
+    currentDecimals = prec.tableDecimals;
+  } else {
+    currentDecimals = 5;
+  }
 
   if (A.length === 0) {
     logger.error("Ma trận A không hợp lệ.");
@@ -261,10 +275,6 @@ export function runGaussSeidel(
   }
   if (x0.length !== n) {
     logger.error(`X₀ phải có đúng ${n} phần tử.`);
-    return;
-  }
-  if (isNaN(eps) || eps <= 0) {
-    logger.error("ε phải là số dương.");
     return;
   }
   if (isNaN(maxIter) || maxIter <= 0) {
@@ -291,7 +301,11 @@ export function runGaussSeidel(
   logger.info(
     `$$X^{(0)} = \\begin{bmatrix} ${x0.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
   );
-  logger.info(`$$\\varepsilon = ${eps}, N = ${maxIter}$$`);
+  if (hasEpsilon) {
+    logger.info(`$$\\varepsilon = ${eps}, N = ${maxIter}$$`);
+  } else {
+    logger.info(`$$N = ${maxIter}$$`);
+  }
 
   // Bước 1: Kiểm tra điều kiện hội tụ
   logger.section("KIỂM TRA ĐIỀU KIỆN HỘI TỤ");
@@ -384,10 +398,14 @@ export function runGaussSeidel(
   const errorCoeff = q / ((1 - s) * (1 - q));
 
   logger.formula("$$\\varepsilon' = \\frac{\\varepsilon(1 - s)(1 - q)}{q}$$");
-  logger.info(`$$\\varepsilon' = ${fmt(epsPrime)}$$`);
-  logger.formula(
-    "Điều kiện dừng: $$\\delta = \\|X^{(k)} - X^{(k-1)}\\|_\\infty \\le \\varepsilon'$$",
-  );
+  if (hasEpsilon) {
+    logger.info(`$$\\varepsilon' = ${fmt(epsPrime)}$$`);
+    logger.formula(
+      "Điều kiện dừng: $$\\delta = \\|X^{(k)} - X^{(k-1)}\\|_\\infty \\le \\varepsilon'$$",
+    );
+  } else {
+    logger.formula(`Lặp đúng $N_{\\max} = ${maxIter}$ lần`);
+  }
   logger.formula(
     "Sai số hậu nghiệm: $$\\left\\| X^{(k)} - x^* \\right\\| \\le \\frac{q}{(1-s)(1-q)} \\delta$$",
   );
@@ -408,31 +426,45 @@ export function runGaussSeidel(
     epsPrime,
     maxIter,
     invDiag,
+    hasEpsilon,
     logger,
   );
 
   logger.separator();
-  logger.text(`Ngưỡng dừng $$\\varepsilon' = ${fmt(epsPrime)}$$`);
+  
+  if (hasEpsilon) {
+    logger.text(`Ngưỡng dừng $$\\varepsilon' = ${fmt(epsPrime)}$$`);
+    if (converged) {
+      logger.success(`✔ Thỏa mãn điều kiện dừng tại bước k = ${k}.`);
+      logger.result(
+        `Nghiệm xấp xỉ: $$X^{(${k})} = \\begin{bmatrix} ${x.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+      );
 
-  if (converged) {
-    logger.success(`✔ Thỏa mãn điều kiện dừng tại bước k = ${k}.`);
+      const errorBound = errorCoeff * delta;
+      logger.section("ĐÁNH GIÁ SAI SỐ HẬU NGHIỆM");
+      logger.info(
+        `$$\\delta = \\left\\| X^{(${k})} - X^{(${k - 1})} \\right\\|_\\infty = ${fmt(delta)}$$`,
+      );
+      logger.formula(
+        `$$\\left\\| X^{(${k})} - x^* \\right\\| \\le \\frac{q}{(1-s)(1-q)} \\delta = ${fmt(errorCoeff)} \\times ${fmt(delta)}$$`,
+      );
+      logger.result(`Sai số không vượt quá: $$${fmt(errorBound)}$$`);
+    } else {
+      logger.warn(`⚠ Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
+      logger.text(
+        `Kết quả cuối: $$X^{(${k})} = \\begin{bmatrix} ${x.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$, $$\\delta = ${fmt(delta)}$$`,
+      );
+    }
+  } else {
+    logger.success(`✔ Hoàn thành quá trình lặp tại bước k = ${k}.`);
     logger.result(
-      `Nghiệm xấp xỉ: $$X^{(${k})} = \\begin{bmatrix} ${x.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+      `Nghiệm xấp xỉ thu được: $$X^{(${k})} = \\begin{bmatrix} ${x.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
     );
-
     const errorBound = errorCoeff * delta;
-    logger.section("ĐÁNH GIÁ SAI SỐ HẬU NGHIỆM");
+    logger.section("ĐÁNH GIÁ SAI SỐ HẬU NGHIỆM TẠI BƯỚC CUỐI");
     logger.info(
       `$$\\delta = \\left\\| X^{(${k})} - X^{(${k - 1})} \\right\\|_\\infty = ${fmt(delta)}$$`,
     );
-    logger.formula(
-      `$$\\left\\| X^{(${k})} - x^* \\right\\| \\le \\frac{q}{(1-s)(1-q)} \\delta = ${fmt(errorCoeff)} \\times ${fmt(delta)}$$`,
-    );
     logger.result(`Sai số không vượt quá: $$${fmt(errorBound)}$$`);
-  } else {
-    logger.warn(`⚠ Không đạt hội tụ sau ${maxIter} bước lặp.`);
-    logger.text(
-      `Kết quả cuối: $$X^{(${k})} = \\begin{bmatrix} ${x.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$, $$\\delta = ${fmt(delta)}$$`,
-    );
   }
 }

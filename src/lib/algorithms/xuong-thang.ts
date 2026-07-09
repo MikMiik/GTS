@@ -4,7 +4,9 @@ import {
   powerIteration,
   formatMatrixForLog,
   fmt,
+  setFormattingDecimals
 } from "./power-eigen";
+import { getPrecisionByEpsilon } from "./math-utils";
 
 type NumMatrix = number[][];
 
@@ -169,6 +171,9 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
   if (isNaN(eps) || eps <= 0) { logger.error("ε phải là số dương."); return; }
   if (isNaN(maxIter) || maxIter <= 0) { logger.error("N phải là số nguyên dương."); return; }
 
+  const { tableDecimals } = getPrecisionByEpsilon(eps);
+  setFormattingDecimals(tableDecimals);
+
   logger.section("THÔNG TIN ĐẦU VÀO");
   logger.text("Ma trận A:");
   logger.table(formatMatrixForLog(A));
@@ -224,7 +229,7 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
     logger.text("  - Gán $\\lambda_2^{(k+1)} = (z_{k+1})_p$.");
     logger.text("  - Chuẩn hóa $y_{k+1} = \\frac{z_{k+1}}{(z_{k+1})_p}$.");
     logger.text("  - Dừng nếu $\\|y_{k+1} - y_k\\|_\\infty < \\epsilon$. Thu được $\\lambda_2 = \\lambda_2^{(k+1)}$.");
-  } else {
+  } else if (method === "C2") {
     logger.section("PHƯƠNG PHÁP XUỐNG THANG - CÁCH 2 (MA TRẬN KHỬ)");
 
     // 1. Tìm phần tử max của v1
@@ -280,6 +285,40 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
     logger.text("  - Gán $\\lambda_2^{(k+1)} = (z_{k+1})_p$.");
     logger.text("  - Chuẩn hóa $y_{k+1} = \\frac{z_{k+1}}{(z_{k+1})_p}$.");
     logger.text("  - Dừng nếu $\\|y_{k+1} - y_k\\|_\\infty < \\epsilon$. Thu được $\\lambda_2 = \\lambda_2^{(k+1)}$.");
+  } else if (method === "C3") {
+    logger.section("PHƯƠNG PHÁP XUỐNG THANG - WIELANDT (MA TRẬN ĐỐI XỨNG)");
+
+    // 1. Chuẩn hóa v1 về chuẩn 2
+    logger.step("**Bước 1: Đưa véc-tơ riêng $v_1$ về chuẩn 2 bằng 1**");
+    const norm2 = Math.sqrt(v1.reduce((sum, val) => sum + val * val, 0));
+    if (norm2 < 1e-15) {
+      logger.error("v₁ là véc-tơ không.");
+      return;
+    }
+    const v1Norm = v1.map(v => v / norm2);
+    logger.text("- $v_1' = \\frac{v_1}{\\|v_1\\|_2}$");
+    logger.info(`$$v_1' = \\begin{bmatrix} ${v1Norm.map(v => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
+
+    // 2. Lập ma trận xuống thang B
+    logger.step("**Bước 2: Lập ma trận xuống thang $A_1$**");
+    const L1_v1_v1T = outerProduct(v1Norm.map(v => v * l1), v1Norm);
+    B = subtractMatrix(A, L1_v1_v1T);
+    logger.text("- $A_1 = A - \\lambda_1 v_1' (v_1')^T$");
+    logger.text("Ma trận xuống thang $A_1$:");
+    logger.table(formatMatrixForLog(B));
+
+    // 3. Lũy thừa
+    logger.step("**Bước 3: Tìm $\\lambda_2$ bằng phương pháp lũy thừa trên $A_1$**");
+    logger.text("- Chọn $y_0 \\neq 0$.");
+    logger.text("- Lặp $k \\ge 0$:");
+    logger.text("  - Tính $z_{k+1} = A_1 y_k$.");
+    logger.text("  - Tìm chỉ số $p$ sao cho $|(z_{k+1})_p|$ max.");
+    logger.text("  - Gán $\\lambda_2^{(k+1)} = (z_{k+1})_p$.");
+    logger.text("  - Chuẩn hóa $y_{k+1} = \\frac{z_{k+1}}{(z_{k+1})_p}$.");
+    logger.text("  - Dừng nếu $\\|y_{k+1} - y_k\\|_\\infty < \\epsilon$. Thu được $\\lambda_2 = \\lambda_2^{(k+1)}$.");
+  } else {
+    logger.error("Phương pháp không hợp lệ.");
+    return;
   }
 
   logger.separator();

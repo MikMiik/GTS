@@ -1,6 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
-
+import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
 export function runBisection(
   params: Record<string, string>,
   logger: Logger,
@@ -20,25 +19,20 @@ export function runBisection(
 
   const a_num = parseFraction(aIn);
   const b_num = parseFraction(bIn);
-  const eps = parseFraction(epsilon);
-
-  if (isNaN(a_num) || isNaN(b_num) || isNaN(eps)) {
-    logger.error("Các tham số a, b, epsilon phải là số hợp lệ.");
-    return;
-  }
-  if (eps <= 0) {
-    logger.error("Epsilon phải là số dương.");
-    return;
+  const hasEpsilon = epsilon !== undefined && epsilon.trim() !== "";
+  let eps = 0;
+  if (hasEpsilon) {
+    eps = parseFraction(epsilon);
+    if (isNaN(eps) || eps <= 0) {
+      logger.error("Epsilon phải là số dương.");
+      return;
+    }
   }
 
   bisectionMethod(f, a_num, b_num, eps, 200, logger);
 }
 
-function getPrecisionByEpsilon(epsilon: number) {
-  const tableDecimals = Math.max(0, Math.ceil(-Math.log10(epsilon)) + 1);
-  const reliableDigits = Math.max(1, Math.round(-Math.log10(2 * epsilon)));
-  return { tableDecimals, reliableDigits };
-}
+
 
 function roundBySignificantDigits(value: number, significantDigits: number) {
   if (!Number.isFinite(value)) return value;
@@ -79,7 +73,15 @@ function bisectionMethod(
   }
   logger.success("✔ $$f(a) \\cdot f(b) < 0$$ — khoảng hợp lệ.");
 
-  const { tableDecimals, reliableDigits } = getPrecisionByEpsilon(epsilon);
+  let tableDecimals = 5;
+  let reliableDigits = 5;
+  const hasEpsilon = epsilon > 0;
+  
+  if (hasEpsilon) {
+    const prec = getPrecisionByEpsilon(epsilon);
+    tableDecimals = prec.tableDecimals;
+    reliableDigits = prec.reliableDigits;
+  }
 
   let n = 0;
   let c = 0;
@@ -89,9 +91,13 @@ function bisectionMethod(
 
   logger.section("QUÁ TRÌNH LẶP");
   logger.formula(`Công thức: $$c = \\frac{a + b}{2}$$`);
-  logger.formula(
-    `Điều kiện dừng: $$|b - a| < \\varepsilon = ${epsilon.toExponential(4)}$$`,
-  );
+  if (hasEpsilon) {
+    logger.formula(
+      `Điều kiện dừng: $$|b - a| < \\varepsilon = ${epsilon.toExponential(4)}$$`,
+    );
+  } else {
+    logger.formula(`Lặp đúng $N_{\\max} = ${maxIter}$ lần`);
+  }
 
   while (n < maxIter) {
     n++;
@@ -108,7 +114,7 @@ function bisectionMethod(
       "|b-a|": formatNumber(diff, tableDecimals),
     });
 
-    if (z === 0 || diff < epsilon) break;
+    if (z === 0 || (hasEpsilon && diff < epsilon)) break;
 
     if (fa * z < 0) {
       b = c;
@@ -121,15 +127,21 @@ function bisectionMethod(
 
   logger.table(tableData);
   logger.separator();
-  logger.text(`Ngưỡng sai số yêu cầu: $$\\varepsilon = ${epsilon.toExponential(4)}$$`);
-
-  if (diff < epsilon || z === 0) {
-    logger.success(`✔ Thỏa mãn điều kiện dừng tại bước lặp n = ${n}.`);
-    const xReliable = roundBySignificantDigits(c, reliableDigits);
-    logger.result(
-      `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x \\approx ${xReliable}$$`,
-    );
+  
+  if (hasEpsilon) {
+    logger.text(`Ngưỡng sai số yêu cầu: $$\\varepsilon = ${epsilon.toExponential(4)}$$`);
+    if (diff < epsilon || z === 0) {
+      logger.success(`✔ Thỏa mãn điều kiện dừng tại bước lặp n = ${n}.`);
+      const xReliable = roundBySignificantDigits(c, reliableDigits);
+      logger.result(
+        `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x \\approx ${xReliable}$$`,
+      );
+    } else {
+      logger.warn(`Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
+      logger.result(`Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(c, tableDecimals)}$$`);
+    }
   } else {
-    logger.warn(`⚠ Thuật toán không hội tụ sau ${maxIter} vòng lặp.`);
+    logger.success(`✔ Hoàn thành quá trình lặp tại bước n = ${n}.`);
+    logger.result(`Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(c, tableDecimals)}$$`);
   }
 }

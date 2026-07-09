@@ -32,3 +32,9 @@ export function parseFraction(v: string): number {
   // Trả về NaN nếu kết quả không hợp lệ (ví dụ chứa ký tự lạ)
   return isNaN(num) ? NaN : num;
 }
+
+export function getPrecisionByEpsilon(epsilon: number) {
+  const tableDecimals = Math.max(0, Math.ceil(-Math.log10(epsilon)) + 1);
+  const reliableDigits = Math.max(1, Math.round(-Math.log10(2 * epsilon)));
+  return { tableDecimals, reliableDigits };
+}

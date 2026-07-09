@@ -1,11 +1,15 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
 
 type NumMatrix = number[][];
 
 export type CaseType = "TH1" | "TH2" | "TH3";
 
-const TABLE_DECIMALS = 5;
+let currentDecimals = 5;
+
+export function setFormattingDecimals(d: number) {
+  currentDecimals = d;
+}
 
 // ---------------------------------------------------------------------------
 // Số phức
@@ -21,7 +25,7 @@ export class Complex {
     return Math.sqrt(this.re * this.re + this.im * this.im);
   }
 
-  toString(decimals = TABLE_DECIMALS) {
+  toString(decimals = currentDecimals) {
     const r = this.re.toFixed(decimals);
     const i = Math.abs(this.im).toFixed(decimals);
     if (Math.abs(this.im) < 1e-10) return r;
@@ -80,7 +84,7 @@ function parseVector(text: string): number[] {
   });
 }
 
-export function fmt(v: number, d = TABLE_DECIMALS): string {
+export function fmt(v: number, d = currentDecimals): string {
   if (!Number.isFinite(v)) return String(v);
   if (Math.abs(v) < 1e-15) return "0";
   return v.toFixed(d);
@@ -213,6 +217,13 @@ export function powerIteration(
     logger.result(
       `$$\\lambda_1 = m_{k+1} \\approx ${fmt(mk)}, \\quad v_1 = x_{k+1} \\approx \\begin{bmatrix} ${x.map((v: number) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
     );
+
+    const norm2 = Math.sqrt(x.reduce((sum, val) => sum + val * val, 0));
+    const xNorm2 = x.map((val) => val / norm2);
+    logger.step("**Bước 3: Chuẩn hóa véc-tơ riêng về chuẩn 2 (tùy chọn theo đề)**");
+    logger.text("- Véc-tơ riêng sau khi đưa về chuẩn 2 ($||v_1||_2 = 1$):");
+    logger.formula(`$$v_1' = \\frac{v_1}{\\|v_1\\|_2} \\approx \\begin{bmatrix} ${xNorm2.map((v: number) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
+
     return { converged: true, caseType: "TH1", lambda: mk, eigenvector: x, k };
   }
 
@@ -357,7 +368,7 @@ export function runPowerEigen(
     return;
   }
 
-  const eps = parseFraction(epsilon);
+
   const maxIter = parseInt(maxIterStr, 10);
 
   if (A.length === 0) {
@@ -377,10 +388,20 @@ export function runPowerEigen(
     logger.error("x₀ phải khác vector không (x ≠ 0).");
     return;
   }
-  if (isNaN(eps) || eps <= 0) {
-    logger.error("ε phải là số dương.");
-    return;
+  const hasEpsilon = epsilon !== undefined && epsilon.trim() !== "";
+  let eps = 1e-10;
+  if (hasEpsilon) {
+    eps = parseFraction(epsilon);
+    if (isNaN(eps) || eps <= 0) {
+      logger.error("ε phải là số dương.");
+      return;
+    }
+    const { tableDecimals } = getPrecisionByEpsilon(eps);
+    setFormattingDecimals(tableDecimals);
+  } else {
+    setFormattingDecimals(5);
   }
+
   if (isNaN(maxIter) || maxIter <= 0) {
     logger.error("N phải là số nguyên dương.");
     return;
@@ -388,7 +409,7 @@ export function runPowerEigen(
 
   logger.section("THÔNG TIN ĐẦU VÀO / ĐẦU RA");
   logger.text(
-    "- **Đầu vào:** Ma trận vuông $A \\in \\mathbb{R}^{n \\times n}$, véc-tơ khởi tạo $x_0 \\ne 0$, sai số cho phép $\\epsilon$.",
+    `- **Đầu vào:** Ma trận vuông $A \\in \\mathbb{R}^{n \\times n}$, véc-tơ khởi tạo $x_0 \\ne 0$${hasEpsilon ? ", sai số cho phép $\\epsilon$" : ""}.`,
   );
   logger.text(
     "- **Đầu ra:** Giá trị riêng trội $\\lambda$ và véc-tơ riêng $v$.",
@@ -400,7 +421,12 @@ export function runPowerEigen(
   logger.formula(
     `$$x_0 = \\begin{bmatrix} ${x0.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
   );
-  logger.info(`$$\\epsilon = ${eps}, N_{\\max} = ${maxIter}$$`);
+  
+  if (hasEpsilon) {
+    logger.info(`$$\\epsilon = ${eps}, N_{\\max} = ${maxIter}$$`);
+  } else {
+    logger.info(`$$N_{\\max} = ${maxIter}$$`);
+  }
 
   logger.section("QUÁ TRÌNH LẶP");
   powerIteration(A, x0, eps, maxIter, logger);

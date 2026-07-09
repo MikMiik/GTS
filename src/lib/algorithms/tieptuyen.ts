@@ -1,6 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
-
+import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
 export function runTiepTuyen(
   params: Record<string, string>,
   logger: Logger,
@@ -34,14 +33,19 @@ export function runTiepTuyen(
   const a = parseFraction(aIn);
   const b = parseFraction(bIn);
   const m1 = parseFraction(m1In);
-  const eps = parseFraction(epsilon);
 
-  if ([a, b, m1, eps].some(isNaN)) {
-    logger.error("Tham số không hợp lệ.");
-    return;
+  const hasEpsilon = epsilon !== undefined && epsilon.trim() !== "";
+  let eps = 0;
+  if (hasEpsilon) {
+    eps = parseFraction(epsilon);
+    if (isNaN(eps) || eps <= 0) {
+      logger.error("Epsilon phải là số dương.");
+      return;
+    }
   }
-  if (eps <= 0) {
-    logger.error("Epsilon phải là số dương.");
+
+  if ([a, b, m1].some(isNaN)) {
+    logger.error("Tham số khoảng hoặc m₁ không hợp lệ.");
     return;
   }
   if (m1 <= 0) {
@@ -59,11 +63,7 @@ function normalizeMathExpr(expr: string): string {
     .replace(/(\))\s*(?=\d)/g, "$1*");
 }
 
-function getPrecisionByEpsilon(epsilon: number) {
-  const tableDecimals = Math.max(0, Math.ceil(-Math.log10(epsilon)) + 2);
-  const reliableDigits = Math.max(1, Math.round(-Math.log10(2 * epsilon)));
-  return { tableDecimals, reliableDigits };
-}
+
 
 function roundBySignificantDigits(value: number, significantDigits: number) {
   if (!Number.isFinite(value)) return value;
@@ -118,7 +118,15 @@ function newtonMethod(
     x_curr = b;
   }
 
-  const { tableDecimals, reliableDigits } = getPrecisionByEpsilon(epsilon);
+  let tableDecimals = 5;
+  let reliableDigits = 5;
+  const hasEpsilon = epsilon > 0;
+  
+  if (hasEpsilon) {
+    const prec = getPrecisionByEpsilon(epsilon);
+    tableDecimals = prec.tableDecimals;
+    reliableDigits = prec.reliableDigits;
+  }
 
   let n = 0;
   let fx = f(x_curr);
@@ -134,12 +142,16 @@ function newtonMethod(
 
   logger.section("QUÁ TRÌNH LẶP");
   logger.formula(`Công thức: $$x_{n+1} = x_n - \\frac{f(x_n)}{f'(x_n)}$$`);
-  logger.formula(
-    `Điều kiện dừng: $$\\frac{|f(x_n)|}{m_1} \\le \\varepsilon = ${epsilon.toExponential(4)}$$`,
-  );
+  if (hasEpsilon) {
+    logger.formula(
+      `Điều kiện dừng: $$\\frac{|f(x_n)|}{m_1} \\le \\varepsilon = ${epsilon.toExponential(4)}$$`,
+    );
+  } else {
+    logger.formula(`Lặp đúng $N_{\\max} = ${maxIter}$ lần`);
+  }
 
   while (n < maxIter) {
-    if (errorEstimate <= epsilon) break;
+    if (hasEpsilon && errorEstimate <= epsilon) break;
     n++;
     const deriv = df(x_curr);
     if (Math.abs(deriv) < 1e-15) {
@@ -160,17 +172,27 @@ function newtonMethod(
 
   logger.table(tableData);
   logger.separator();
-  logger.text(
-    `$$m_1 = ${m1}$$, ngưỡng dừng $$|f(x)| \\le m_1 \\cdot \\varepsilon = ${(m1 * epsilon).toExponential(4)}$$`,
-  );
 
-  if (errorEstimate <= epsilon) {
-    logger.success(`✔ Hội tụ sau ${n} bước lặp.`);
-    const xReliable = roundBySignificantDigits(x_curr, reliableDigits);
-    logger.result(
-      `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x \\approx ${xReliable}$$`,
+  if (hasEpsilon) {
+    logger.text(
+      `$$m_1 = ${m1}$$, ngưỡng dừng $$|f(x)| \\le m_1 \\cdot \\varepsilon = ${(m1 * epsilon).toExponential(4)}$$`,
     );
+    if (errorEstimate <= epsilon) {
+      logger.success(`✔ Thỏa mãn điều kiện dừng tại bước $n = ${n}$.`);
+      const xReliable = roundBySignificantDigits(x_curr, reliableDigits);
+      logger.result(
+        `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$x \\approx ${xReliable}$$`,
+      );
+    } else {
+      logger.warn(`⚠ Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
+      logger.result(
+        `Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(x_curr, tableDecimals)}$$`,
+      );
+    }
   } else {
-    logger.warn(`⚠ Không đạt sai số sau ${maxIter} vòng lặp.`);
+    logger.success(`✔ Hoàn thành quá trình lặp tại bước n = ${n}.`);
+    logger.result(
+      `Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(x_curr, tableDecimals)}$$`,
+    );
   }
 }

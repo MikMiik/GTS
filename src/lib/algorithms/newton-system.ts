@@ -1,5 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
 import { create, all } from "mathjs";
 
 const math = create(all);
@@ -98,19 +98,34 @@ export function runNewtonSystem(params: Record<string, string>, logger: Logger):
     return;
   }
 
-  // 4. Parse tolerance and maxIter
-  const tol = parseFraction(tolIn);
-  if (isNaN(tol) || tol <= 0) {
-    logger.error("Tolerance phải là số dương.");
-    return;
+  const hasTol = tolIn !== undefined && tolIn.trim() !== "";
+  let tol = 0;
+  if (hasTol) {
+    tol = parseFraction(tolIn);
+    if (isNaN(tol) || tol <= 0) {
+      logger.error("Tolerance phải là số dương.");
+      return;
+    }
   }
   const maxIter = parseInt(maxIterStr, 10) || 50;
 
-  // 5. Run Newton Iteration
+  let tableDecimals = 5;
+  let reliableDigits = 5;
+  if (hasTol) {
+    const prec = getPrecisionByEpsilon(tol);
+    tableDecimals = prec.tableDecimals;
+    reliableDigits = prec.reliableDigits;
+  }
+
   logger.section("QUÁ TRÌNH LẶP NEWTON");
   logger.text(`$$X^{(0)} = \\begin{bmatrix} ${x0Arr.map((v) => v.toFixed(6)).join(" & ")} \\end{bmatrix}^T$$`);
-  logger.text(`Sai số cho phép: $$\\varepsilon = ${tol}$$`);
-  logger.formula("Công thức: $$J(X^{(k)}) \\Delta X_k = -F(X^{(k)}), \\quad X^{(k+1)} = X^{(k)} + \\Delta X_k$$");
+  if (hasTol) {
+    logger.text(`Sai số cho phép: $$\\varepsilon = ${tol}$$`);
+    logger.formula("Công thức: $$J(X^{(k)}) \\Delta X_k = -F(X^{(k)}), \\quad X^{(k+1)} = X^{(k)} + \\Delta X_k$$");
+  } else {
+    logger.formula("Công thức: $$J(X^{(k)}) \\Delta X_k = -F(X^{(k)}), \\quad X^{(k+1)} = X^{(k)} + \\Delta X_k$$");
+    logger.formula(`Lặp đúng $N_{\\max} = ${maxIter}$ lần`);
+  }
 
   let X = [...x0Arr];
   const tableData: Record<string, unknown>[] = [];
@@ -153,32 +168,36 @@ export function runNewtonSystem(params: Record<string, string>, logger: Logger):
     // Prepare table row
     const rowObj: Record<string, unknown> = { k: k + 1 };
     for (let i = 0; i < n; i++) {
-      rowObj[vars[i]] = Xnext[i].toFixed(8);
+      rowObj[vars[i]] = Number(Xnext[i].toFixed(tableDecimals));
     }
-    rowObj["||ΔX||∞"] = error.toExponential(4);
+    rowObj["||ΔX||∞"] = Number(error.toFixed(tableDecimals));
     tableData.push(rowObj);
-
-    // Detailed log for the step
-    logger.step(`Bước k = ${k}`);
-    logger.info(`  $$F(X^{(${k})}) = \\begin{bmatrix} ${Fk.map((v) => v.toFixed(6)).join(" & ")} \\end{bmatrix}^T$$`);
-    logger.info(`  $$\\Delta X_{${k}} = \\begin{bmatrix} ${deltaX.map((v) => v.toFixed(6)).join(" & ")} \\end{bmatrix}^T$$`);
-    logger.info(`  $$X^{(${k + 1})} = \\begin{bmatrix} ${Xnext.map((v) => v.toFixed(6)).join(" & ")} \\end{bmatrix}^T$$`);
-    logger.info(`  Sai số = ${error.toExponential(4)}`);
 
     X = Xnext;
 
-    if (error < tol) {
+    if (hasTol && error < tol) {
       logger.separator();
       logger.table(tableData);
       logger.separator();
-      logger.success(`✔ Hội tụ sau ${k + 1} bước lặp.`);
-      logger.result(`Nghiệm xấp xỉ: $$X^* = \\begin{bmatrix} ${X.map((v) => v.toFixed(8)).join(" & ")} \\end{bmatrix}^T$$`);
+      logger.success(`✔ Thỏa mãn điều kiện dừng tại bước k = ${k + 1}.`);
+      logger.result(
+        `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$X \\approx \\begin{bmatrix} ${X.map((v) => Number(v.toFixed(reliableDigits))).join(" & ")} \\end{bmatrix}^T$$`,
+      );
       return;
     }
   }
 
   logger.separator();
   logger.table(tableData);
-  logger.warn(`Không hội tụ sau ${maxIter} bước.`);
-  logger.result(`Kết quả cuối cùng: $$X = \\begin{bmatrix} ${X.map((v) => v.toFixed(8)).join(" & ")} \\end{bmatrix}^T$$`);
+  if (hasTol) {
+    logger.warn(`⚠ Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
+    logger.result(
+      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X.map((v) => Number(v.toFixed(tableDecimals))).join(" & ")} \\end{bmatrix}^T$$`,
+    );
+  } else {
+    logger.success(`✔ Hoàn thành quá trình lặp tại bước k = ${maxIter}.`);
+    logger.result(
+      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X.map((v) => Number(v.toFixed(tableDecimals))).join(" & ")} \\end{bmatrix}^T$$`,
+    );
+  }
 }

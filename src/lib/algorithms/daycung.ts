@@ -1,6 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
-
+import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
 export function runDayCung(params: Record<string, string>, logger: Logger): void {
   const { fStr, a: aIn, b: bIn, epsilon } = params;
   let f: (x: number) => number;
@@ -11,9 +10,16 @@ export function runDayCung(params: Record<string, string>, logger: Logger): void
     logger.error("Lỗi cú pháp hàm f(x): " + (e as Error).message);
     return;
   }
-  const a = parseFraction(aIn), b = parseFraction(bIn), eps = parseFraction(epsilon);
-  if ([a, b, eps].some(isNaN)) { logger.error("Tham số không hợp lệ."); return; }
-  if (eps <= 0) { logger.error("Epsilon phải là số dương."); return; }
+  const a = parseFraction(aIn), b = parseFraction(bIn);
+  if ([a, b].some(isNaN)) { logger.error("Tham số khoảng [a, b] không hợp lệ."); return; }
+  
+  const hasEpsilon = epsilon !== undefined && epsilon.trim() !== "";
+  let eps = 0;
+  if (hasEpsilon) {
+    eps = parseFraction(epsilon);
+    if (isNaN(eps) || eps <= 0) { logger.error("Epsilon phải là số dương."); return; }
+  }
+
   solveDayCung(f, a, b, eps, 100, logger);
 }
 
@@ -27,9 +33,7 @@ function estimateM(f: (x: number) => number, a: number, b: number) {
   return { m1, M1 };
 }
 
-function prec(epsilon: number) {
-  return { tableDecimals: Math.max(0,Math.ceil(-Math.log10(epsilon))+2), reliableDigits: Math.max(1,Math.round(-Math.log10(2*epsilon))) };
-}
+
 
 function rnd(v: number, sig: number) {
   if(!Number.isFinite(v)) return v;
@@ -52,7 +56,14 @@ function solveDayCung(f: (x: number) => number, a: number, b: number, epsilon: n
   logger.info(`$$f(b) = f(${b}) = ${fb.toFixed(6)}$$`);
   if(fa*fb>=0){ logger.error("$$f(a) \\cdot f(b) \\ge 0$$ — không phải khoảng cách ly nghiệm!"); return; }
   logger.success("✔ $$f(a) \\cdot f(b) < 0$$ — khoảng hợp lệ.");
-  const { tableDecimals, reliableDigits } = prec(epsilon);
+  let tableDecimals = 5;
+  let reliableDigits = 5;
+  const hasEpsilon = epsilon > 0;
+  if (hasEpsilon) {
+    const p = getPrecisionByEpsilon(epsilon);
+    tableDecimals = p.tableDecimals;
+    reliableDigits = p.reliableDigits;
+  }
   const { m1, M1 } = estimateM(f,a,b);
   logger.section("ƯỚC LƯỢNG m₁, M₁");
   logger.info(`$$m_1 \\approx ${m1.toFixed(6)}, M_1 \\approx ${M1.toFixed(6)}, q = ${((M1-m1)/m1).toFixed(6)}$$`);
@@ -77,7 +88,7 @@ function solveDayCung(f: (x: number) => number, a: number, b: number, epsilon: n
     const errT=Math.abs(fxk)/m1;
     const errC=xPrev!==null?((M1-m1)/m1)*Math.abs(xk-xPrev):null;
     tableData.push({ k, xₖ:fmt(xk,tableDecimals), "f(xₖ)":fxk.toExponential(4), "xₖ₊₁":fmt(xNext,tableDecimals), "f(xₖ₊₁)":fxNext.toExponential(4), "CT(1)|f|/m₁":errT.toExponential(4) });
-    if(errT<epsilon||( errC!==null && errC<epsilon)){
+    if(hasEpsilon && (errT<epsilon||( errC!==null && errC<epsilon))){
       logger.table(tableData); logger.separator();
       logger.success(`✔ Hội tụ tại bước k = ${k}`);
       const xR=rnd(xNext,reliableDigits);
@@ -87,6 +98,10 @@ function solveDayCung(f: (x: number) => number, a: number, b: number, epsilon: n
     xPrev=xk; xk=xNext;
   }
   logger.table(tableData);
-  logger.warn(`Không hội tụ sau ${maxIter} bước. $$x \\approx ${fmt(xk,tableDecimals)}$$`);
-  logger.result(`$$x \\approx ${rnd(xk,reliableDigits)}$$`);
+  if (hasEpsilon) {
+    logger.warn(`Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
+  } else {
+    logger.success(`✔ Hoàn thành quá trình lặp tại bước k = ${maxIter}.`);
+  }
+  logger.result(`$$x \\approx ${fmt(xk,tableDecimals)}$$`);
 }

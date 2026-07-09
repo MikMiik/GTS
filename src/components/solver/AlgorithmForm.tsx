@@ -596,7 +596,8 @@ function JacobiMatrixFields({ onKeyDown }: FieldProps) {
   return (
     <>
       <div className="matrix-help">
-        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và vector b (mỗi dòng một giá trị).
+        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và vector b (mỗi dòng một
+        giá trị).
       </div>
       <div className="form-section-title">Ma trận A (hệ số)</div>
       <div className="form-group">
@@ -1073,6 +1074,9 @@ function XuongThangFields({ onKeyDown }: FieldProps) {
         <select className="form-input" id="in-method" name="method">
           <option value="C1">Cách 1: Sử dụng Véc-tơ riêng trái (w₁)</option>
           <option value="C2">Cách 2: Sử dụng Ma trận khử (Θ)</option>
+          <option value="C3">
+            Cách 3: Phương pháp Wielandt (Cho ma trận đối xứng)
+          </option>
         </select>
       </div>
       <div className="form-section-title">Đầu vào Ma trận & Véc-tơ</div>

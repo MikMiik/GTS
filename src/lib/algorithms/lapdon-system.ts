@@ -1,15 +1,9 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
 import { create, all } from "mathjs";
 
 const math = create(all);
 
-function prec(epsilon: number) {
-  return {
-    tableDecimals: Math.max(0, Math.ceil(-Math.log10(epsilon)) + 1),
-    reliableDigits: Math.max(1, Math.round(-Math.log10(2 * epsilon))),
-  };
-}
 
 function rnd(v: number, sig: number) {
   if (!Number.isFinite(v)) return v;
@@ -78,25 +72,34 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
     return;
   }
 
-  // 4. Parse q and epsilon
   const q = parseFraction(qIn);
-  const eps = parseFraction(epsilon);
-  if (isNaN(q) || isNaN(eps)) {
-    logger.error("q và epsilon phải là số hợp lệ.");
+  if (isNaN(q)) {
+    logger.error("q phải là số hợp lệ.");
     return;
   }
   if (q >= 1 || q <= 0) {
     logger.error("Hệ số co q phải nằm trong khoảng (0, 1).");
     return;
   }
-  if (eps <= 0) {
-    logger.error("Epsilon phải là số dương.");
-    return;
+
+  const hasEpsilon = epsilon !== undefined && epsilon.trim() !== "";
+  let eps = 0;
+  if (hasEpsilon) {
+    eps = parseFraction(epsilon);
+    if (isNaN(eps) || eps <= 0) { logger.error("Epsilon phải là số dương."); return; }
   }
 
   const maxIter = parseInt(maxIterStr, 10) || 100;
-  const eps0 = ((1 - q) / q) * eps;
-  const { tableDecimals, reliableDigits } = prec(eps);
+  const eps0 = hasEpsilon ? ((1 - q) / q) * eps : 0;
+  
+  let tableDecimals = 5;
+  let reliableDigits = 5;
+  
+  if (hasEpsilon) {
+    const p = getPrecisionByEpsilon(eps);
+    tableDecimals = p.tableDecimals;
+    reliableDigits = p.reliableDigits;
+  }
 
   const fmtVec = (v: number[]) => `[${v.map((vi) => fmt(vi, tableDecimals)).join(", ")}]`;
 
@@ -105,14 +108,21 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
   logger.step("**Bước 1 & 2: Thiết lập hệ lặp và hệ số co**");
   logger.text(`- Véc-tơ khởi tạo: $X^{(0)} = \\begin{bmatrix} ${x0Arr.join(" & ")} \\end{bmatrix}^T$`);
   logger.text(`- Hệ số co (người dùng cung cấp): $q = ${q}$`);
-  logger.text(`- Sai số yêu cầu: $\\varepsilon = ${eps.toExponential(4)}$`);
-  logger.text(`- Sai số ngưỡng: $\\varepsilon_0 = \\frac{1-q}{q}\\varepsilon = ${eps0.toExponential(4)}$`);
+  if (hasEpsilon) {
+    logger.text(`- Sai số yêu cầu: $\\varepsilon = ${eps.toExponential(4)}$`);
+    logger.text(`- Sai số ngưỡng: $\\varepsilon_0 = \\frac{1-q}{q}\\varepsilon = ${eps0.toExponential(4)}$`);
+  }
   
   logger.step("**Bước 3: Công thức lặp**");
   logger.formula("Dãy lặp xấp xỉ nghiệm: $$X^{(k+1)} = \\Phi(X^{(k)})$$");
   
-  logger.step("**Bước 4: Điều kiện dừng**");
-  logger.formula("Kiểm tra theo chuẩn vô cùng: $$\\frac{q}{1-q}\\left\\| X^{(k)} - X^{(k-1)} \\right\\|_\\infty < \\varepsilon \\iff \\left\\| X^{(k)} - X^{(k-1)} \\right\\|_\\infty < \\varepsilon_0$$");
+  if (hasEpsilon) {
+    logger.step("**Bước 4: Điều kiện dừng**");
+    logger.formula("Kiểm tra theo chuẩn vô cùng: $$\\frac{q}{1-q}\\left\\| X^{(k)} - X^{(k-1)} \\right\\|_\\infty < \\varepsilon \\iff \\left\\| X^{(k)} - X^{(k-1)} \\right\\|_\\infty < \\varepsilon_0$$");
+  } else {
+    logger.step("**Bước 4: Điều kiện dừng**");
+    logger.formula(`Lặp đúng $N_{\\max} = ${maxIter}$ lần`);
+  }
 
   // 6. Fixed-point iteration
   logger.separator();
@@ -138,26 +148,34 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
       if (d > maxDiff) maxDiff = d;
     }
 
-    tableData.push({ k: step, "X_k": fmtVec([...X_curr]), "||ΔX||∞": fmt(maxDiff, tableDecimals) });
+    tableData.push({ k: step, "X_k": fmtVec(X_curr), "||ΔX||∞": fmt(maxDiff, tableDecimals) });
 
-    if (maxDiff < eps0) break;
+    if (hasEpsilon && maxDiff < eps0) {
+      break;
+    }
     X_prev = [...X_curr];
   }
 
   logger.table(tableData);
   logger.separator();
-  logger.text(`Ngưỡng dừng: $$\\varepsilon_0 = ${eps0.toExponential(4)}$$`);
-
-  if (maxDiff < eps0) {
-    logger.success(`Thỏa mãn điều kiện dừng tại bước $k = ${step}$.`);
-    const XR = X_curr.map((v) => rnd(v, reliableDigits));
-    logger.result(
-      `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$X \\approx \\begin{bmatrix} ${XR.join(" & ")} \\end{bmatrix}^T$$`
-    );
+  
+  if (hasEpsilon) {
+    logger.text(`Ngưỡng dừng: $\\varepsilon_0 = ${eps0.toExponential(4)}$`);
+    if (maxDiff < eps0) {
+      logger.success(`✔ Thỏa mãn điều kiện dừng tại bước $k = ${step}$.`);
+      logger.result(
+        `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$X \\approx \\begin{bmatrix} ${X_curr.map((v) => rnd(v, reliableDigits)).join(" & ")} \\end{bmatrix}^T$$`,
+      );
+    } else {
+      logger.warn(`⚠ Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
+      logger.result(
+        `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X_curr.map((v) => fmt(v, tableDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
+      );
+    }
   } else {
-    logger.warn(`Thuật toán không hội tụ sau ${maxIter} vòng lặp.`);
-    logger.text(
-      `- Kết quả cuối: $$X = \\begin{bmatrix} ${X_curr.map((v) => fmt(v, tableDecimals)).join(" & ")} \\end{bmatrix}^T$$`
+    logger.success(`✔ Hoàn thành quá trình lặp tại bước k = ${step}.`);
+    logger.result(
+      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X_curr.map((v) => fmt(v, tableDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
     );
   }
 }
