@@ -153,9 +153,9 @@ export function powerIteration(
     x.map((_, i) => [`$(x_k)_{${i + 1}}$`, fmt(x[i])]),
   );
   tableData.push({
-    "$k$": k,
+    $k$: k,
     ...xCols0,
-    "$m_k$": "—",
+    $m_k$: "—",
     "$\\|x_k - x_{k-1}\\|_\\infty$": "—",
   });
 
@@ -185,9 +185,9 @@ export function powerIteration(
       xNext.map((_, i) => [`$(x_k)_{${i + 1}}$`, fmt(xNext[i])]),
     );
     tableData.push({
-      "$k$": k,
+      $k$: k,
       ...xCols,
-      "$m_k$": fmt(mk),
+      $m_k$: fmt(mk),
       "$\\|x_k - x_{k-1}\\|_\\infty$": fmt(err),
     });
 
@@ -206,7 +206,9 @@ export function powerIteration(
   logger.step("**Bước 2: Xác định kết quả**");
 
   if (converged) {
-    logger.text("- **Trường hợp 1: Một giá trị riêng thực trội duy nhất**\n    - Xảy ra khi dãy $x_k$ hội tụ.");
+    logger.text(
+      "- **Trường hợp 1: Một giá trị riêng thực trội duy nhất**\n    - Xảy ra khi dãy $x_k$ hội tụ.",
+    );
     logger.text("- Kết quả:");
     logger.result(
       `$$\\lambda_1 = m_{k+1} \\approx ${fmt(mk)}, \\quad v_1 = x_{k+1} \\approx \\begin{bmatrix} ${x.map((v: number) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
@@ -244,7 +246,9 @@ export function powerIteration(
     const maxDiff = Math.max(...ratiosTH2.map((r) => Math.abs(r - avgRatio)));
 
     if (avgRatio > 0 && maxDiff < 0.1 * avgRatio) {
-      logger.text("- **Trường hợp 2: Hai giá trị riêng đối nhau ($\\lambda_1 = -\\lambda_2$)**\n    - Xảy ra khi dãy $x_k$ không hội tụ mà đổi dấu luân phiên.\n    - Lấy 3 véc-tơ lặp liên tiếp chưa chuẩn hóa (tính dội lại $y_{k+1}, y_{k+2}$ từ $x_k$).\n    - Tính $\\lambda_{1}^{2} \\approx \\frac{(y_{k+2})_i}{(x_k)_i}$ (với thành phần $i$ bất kỳ khác 0).");
+      logger.text(
+        "- **Trường hợp 2: Hai giá trị riêng đối nhau ($\\lambda_1 = -\\lambda_2$)**\n    - Xảy ra khi dãy $x_k$ không hội tụ mà đổi dấu luân phiên.\n    - Lấy 3 véc-tơ lặp liên tiếp chưa chuẩn hóa (tính dội lại $y_{k+1}, y_{k+2}$ từ $x_k$).\n    - Tính $\\lambda_{1}^{2} \\approx \\frac{(y_{k+2})_i}{(x_k)_i}$ (với thành phần $i$ bất kỳ khác 0).",
+      );
       logger.formula(
         `$$\\lambda_1^2 \\approx \\frac{(y_{k+2})_i}{(x_k)_i} \\approx ${fmt(avgRatio)}$$`,
       );
@@ -264,7 +268,9 @@ export function powerIteration(
   }
 
   // TH3
-  logger.text("- **Trường hợp 3: Hai giá trị riêng phức liên hợp ($\\lambda_1 = \\overline{\\lambda_2}$)**\n    - Xảy ra khi dãy không hội tụ và không có quy luật đổi dấu.\n    - Dựa vào 3 véc-tơ lặp liên tiếp $x_k, y_{k+1}, y_{k+2}$ để giải phương trình đặc trưng $t^2 - pt + q = 0$ thông qua định thức (với 2 thành phần $i, j$ bất kỳ):");
+  logger.text(
+    "- **Trường hợp 3: Hai giá trị riêng phức liên hợp ($\\lambda_1 = \\overline{\\lambda_2}$)**\n    - Xảy ra khi dãy không hội tụ và không có quy luật đổi dấu.\n    - Dựa vào 3 véc-tơ lặp liên tiếp $x_k, y_{k+1}, y_{k+2}$ để giải phương trình đặc trưng $t^2 - pt + q = 0$ thông qua định thức (với 2 thành phần $i, j$ bất kỳ):",
+  );
 
   // Chọn 2 chỉ số i, j có trị tuyệt đối lớn nhất trong xLast
   const indices = xLast
@@ -381,9 +387,13 @@ export function runPowerEigen(
   }
 
   logger.section("THÔNG TIN ĐẦU VÀO / ĐẦU RA");
-  logger.text("- **Đầu vào:** Ma trận vuông $A \\in \\mathbb{R}^{n \\times n}$, véc-tơ khởi tạo $x_0 \\ne 0$, sai số cho phép $\\epsilon$.");
-  logger.text("- **Đầu ra:** Giá trị riêng trội $\\lambda$ và véc-tơ riêng $v$.");
-  logger.info(`Ma trận $A$ kích thước ${n} \\times ${n}`);
+  logger.text(
+    "- **Đầu vào:** Ma trận vuông $A \\in \\mathbb{R}^{n \\times n}$, véc-tơ khởi tạo $x_0 \\ne 0$, sai số cho phép $\\epsilon$.",
+  );
+  logger.text(
+    "- **Đầu ra:** Giá trị riêng trội $\\lambda$ và véc-tơ riêng $v$.",
+  );
+  logger.info(`Ma trận $A$ kích thước $n \\times n$`);
   logger.formula(
     `$$A = \\begin{bmatrix} ${A.map((row) => row.map((v) => fmt(v)).join(" & ")).join(" \\\\ ")} \\end{bmatrix}$$`,
   );
