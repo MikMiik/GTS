@@ -62,6 +62,14 @@ function sub(a: number[], b: number[]): number[] {
   return a.map((x, i) => x - b[i]);
 }
 
+function addMat(A: Mat, B: Mat): Mat {
+  return A.map((row, i) => row.map((val, j) => val + B[i][j]));
+}
+
+function outerProduct(u: number[], v: number[]): Mat {
+  return u.map((ui) => v.map((vj) => ui * vj));
+}
+
 /** Gram-Schmidt trực chuẩn hóa một tập vector cột */
 function gramSchmidt(vecs: number[][]): number[][] {
   const result: number[][] = [];
@@ -286,6 +294,9 @@ export function computeSVD(A: Mat, logger: Logger): SvdResult | null {
 // ─── Run function ─────────────────────────────────────────────────────────────
 
 export function runSvd(params: Record<string, string>, logger: Logger): void {
+  const { truncationR, targetErrorPct } = params;
+  const tR = truncationR ? parseInt(truncationR, 10) : NaN;
+  const tErr = targetErrorPct ? parseFloat(targetErrorPct) : NaN;
   let A: Mat;
   try {
     A = parseMatrix(params.matA);
@@ -313,4 +324,48 @@ export function runSvd(params: Record<string, string>, logger: Logger): void {
   logger.result(`$$V^T = ${fmtMat(Vt)}$$`);
   logger.separator();
   logger.success(`Khai triển SVD: $A = U\\Sigma V^T$`);
+
+  // --- BƯỚC 7: XẤP XỈ MA TRẬN (SVD TRUNCATION) ---
+  if (!isNaN(tR) || !isNaN(tErr)) {
+    logger.step("**Bước 7: Xấp xỉ ma trận (SVD Truncation)**");
+    
+    // Tổng bình phương giá trị kỳ dị = ||A||_F^2
+    const totalVariance = result.singularValues.reduce((sum, val) => sum + val * val, 0);
+    const normAF = Math.sqrt(totalVariance);
+    logger.formula(`$$\\|A\\|_F = \\sqrt{\\sum_{i=1}^{${result.rank}} \\sigma_i^2} = ${fmtNum(normAF)}$$`);
+
+    let finalR = 1;
+    if (!isNaN(tErr)) {
+      logger.text(`Mục tiêu: Tìm bậc xấp xỉ $r$ sao cho sai số tương đối $\\le ${tErr}\\%$`);
+      for (let currR = 1; currR <= result.rank; currR++) {
+        const explainedVar = result.singularValues.slice(0, currR).reduce((sum, val) => sum + val * val, 0);
+        const errVar = totalVariance - explainedVar;
+        const errNorm = Math.sqrt(Math.max(0, errVar));
+        const errPct = (errNorm / normAF) * 100;
+        logger.text(`- Tại $r = ${currR}$, Sai số = $\\frac{\\sqrt{\\sum_{i=${currR+1}}^{${result.rank}} \\sigma_i^2}}{\\|A\\|_F} \\approx ${fmtNum(errPct, 2)}\\%$`);
+        
+        finalR = currR;
+        if (errPct <= tErr) {
+          logger.text(`$\\rightarrow$ Chọn bậc xấp xỉ $r = ${currR}$ (Thỏa mãn $\\le ${tErr}\\%$)`);
+          break;
+        }
+      }
+    } else if (!isNaN(tR)) {
+      finalR = Math.max(1, Math.min(tR, result.rank));
+      logger.text(`Người dùng yêu cầu bậc xấp xỉ $r = ${finalR}$.`);
+    }
+
+    let A_approx = Array.from({ length: m }, () => new Array(n).fill(0));
+    // UCols và VCols có thể trích từ ma trận U và V
+    for (let i = 0; i < finalR; i++) {
+      const u_i = U.map(row => row[i]);
+      const v_i = Vt[i]; // row i of Vt is col i of V
+      const sigma_i = result.singularValues[i];
+      const outer = outerProduct(u_i, v_i).map(row => scale(row, sigma_i));
+      A_approx = addMat(A_approx, outer);
+    }
+
+    logger.text(`Ma trận xấp xỉ $\\hat{A}_{${finalR}} = \\sum_{i=1}^{${finalR}} \\sigma_i u_i v_i^T$:`);
+    logger.formula(`$$\\hat{A}_{${finalR}} = ${fmtMat(A_approx)}$$`);
+  }
 }

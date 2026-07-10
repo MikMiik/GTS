@@ -231,6 +231,8 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     icon: "\u03a3",
     defaultValues: {
       matA: "1 1\n0 0\n0 0",
+      truncationR: "",
+      targetErrorPct: ""
     },
     run: runSvd,
   },
@@ -242,7 +244,9 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
       matA: "4 -1 1\n-1 3 -2\n1 -2 3",
       x0Str: "1 1 1",
       epsilon: "1e-5",
-      maxIter: "100"
+      maxIter: "100",
+      truncationR: "",
+      targetErrorPct: ""
     },
     run: runSvdPower,
   },

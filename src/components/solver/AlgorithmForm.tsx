@@ -1064,10 +1064,10 @@ function CholeskySolveFields() {
           spellCheck={false}
         />
       </div>
-      <div className="form-section-title">Vector B (vế phải)</div>
+      <div className="form-section-title">Ma trận B (vế phải)</div>
       <div className="form-group">
         <label className="form-label" htmlFor="in-vecB">
-          Vector B (mỗi dòng 1 giá trị)
+          Ma trận B (có thể nhiều cột)
         </label>
         <textarea
           className="form-textarea"
@@ -1085,8 +1085,7 @@ function LuSolveFields() {
   return (
     <>
       <div className="matrix-help">
-        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và vector B (mỗi dòng một
-        giá trị).
+        📋 Nhập ma trận vuông A (mỗi hàng một dòng) và ma trận B (mỗi hàng một dòng, các cột cách nhau bằng khoảng trắng).
         <br />
         Ví dụ hàng A: <code>2 2 0</code>
       </div>
@@ -1103,10 +1102,10 @@ function LuSolveFields() {
           spellCheck={false}
         />
       </div>
-      <div className="form-section-title">Vector B (vế phải)</div>
+      <div className="form-section-title">Ma trận B (vế phải)</div>
       <div className="form-group">
         <label className="form-label" htmlFor="in-vecB">
-          Vector B (mỗi dòng 1 giá trị)
+          Ma trận B (có thể nhiều cột)
         </label>
         <textarea
           className="form-textarea"
@@ -1263,6 +1262,40 @@ function SvdMatrixFields({
           spellCheck={false}
         />
       </div>
+      {(method === "svd") && (
+        <>
+          <div className="form-section-title">Xấp xỉ ma trận (Tùy chọn)</div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label" htmlFor="in-truncR">
+                Số bậc r (giữ r giá trị)
+              </label>
+              <input
+                className="form-input"
+                id="in-truncR"
+                name="truncationR"
+                type="number"
+                min="1"
+                step="1"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="in-targetErr">
+                Hoặc Sai số tối đa (%)
+              </label>
+              <input
+                className="form-input"
+                id="in-targetErr"
+                name="targetErrorPct"
+                type="number"
+                min="0"
+                step="any"
+              />
+              <div className="form-hint">Ví dụ: <code>5</code></div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -1326,6 +1359,38 @@ function SvdPowerFields({ onKeyDown }: FieldProps) {
             step="1"
             onKeyDown={onKeyDown}
           />
+        </div>
+      </div>
+      <div className="form-section-title">Xấp xỉ ma trận (Tùy chọn)</div>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-truncR2">
+            Số bậc r (giữ r giá trị)
+          </label>
+          <input
+            className="form-input"
+            id="in-truncR2"
+            name="truncationR"
+            type="number"
+            min="1"
+            step="1"
+            onKeyDown={onKeyDown}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="in-targetErr2">
+            Hoặc Sai số tối đa (%)
+          </label>
+          <input
+            className="form-input"
+            id="in-targetErr2"
+            name="targetErrorPct"
+            type="number"
+            min="0"
+            step="any"
+            onKeyDown={onKeyDown}
+          />
+          <div className="form-hint">Ví dụ: <code>5</code></div>
         </div>
       </div>
     </>

@@ -6,7 +6,6 @@ import {
   forwardSub,
   logLuDecomposition,
   parseMatrix,
-  parseVector,
   validateSquareMatrix,
 } from "@/lib/algorithms/lu-core";
 
@@ -17,10 +16,11 @@ export function runLuSolve(
   const { matA, vecB } = params;
 
   let A: number[][];
-  let B: number[];
+  let B: number[][];
   try {
     A = parseMatrix(matA);
-    B = parseVector(vecB);
+    // Parse vecB as a matrix to support multiple columns
+    B = parseMatrix(vecB);
   } catch (e) {
     logger.error("Lỗi đọc dữ liệu: " + (e as Error).message);
     return;
@@ -34,17 +34,18 @@ export function runLuSolve(
 
   const n = A.length;
   if (B.length !== n) {
-    logger.error(`Vector B phải có ${n} phần tử, nhận được ${B.length}.`);
+    logger.error(`Ma trận B phải có ${n} hàng, nhận được ${B.length}.`);
     return;
   }
+
+  const numColsB = B[0].length;
 
   logger.section("MA TRẬN ĐẦU VÀO");
   logger.info(`Kích thước A: ${n} × ${n}`);
   logger.text("Ma trận A:");
   logger.table(formatMatrixForLog(A));
-  logger.text(
-    `Vector $$B = \\begin{bmatrix} ${B.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
-  );
+  logger.text(`Ma trận B (${n} × ${numColsB}):`);
+  logger.table(formatMatrixForLog(B));
 
   const factor = logLuDecomposition(A, logger, "BƯỚC 1 (B1): PHÂN TÁCH A = LU");
   if (!factor) return;
@@ -57,32 +58,55 @@ export function runLuSolve(
   logger.text("Ma trận U:");
   logger.table(formatMatrixForLog(U));
 
-  logger.section("BƯỚC 2 (B2): GIẢI LY = B");
-  logger.formula("$$y_1 = \\frac{b_1}{l_{11}}$$");
-  logger.formula(
-    "$$y_i = \\frac{b_i - \\sum_{j=1}^{i-1} l_{ij} y_j}{l_{ii}} \\quad (i = 2 \\dots n)$$",
-  );
+  const finalX: number[][] = Array.from({ length: n }, () => new Array(numColsB).fill(0));
+  const finalY: number[][] = Array.from({ length: n }, () => new Array(numColsB).fill(0));
 
-  const Y = forwardSub(L, B, (step) => {
-    logger.formula(step.detail);
-  });
+  for (let col = 0; col < numColsB; col++) {
+    if (numColsB > 1) {
+      logger.separator();
+      logger.step(`*** GIẢI CHO CỘT ${col + 1} ***`);
+    }
 
-  logger.result(
-    `$$Y = \\begin{bmatrix} ${Y.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
-  );
+    const bCol = B.map(row => row[col]);
 
-  logger.section("BƯỚC 3 (B3): GIẢI UX = Y");
-  logger.formula("$$x_n = y_n$$");
-  logger.formula(
-    "$$x_i = y_i - \\sum_{j=i+1}^n u_{ij} x_j \\quad (i = n-1 \\dots 1)$$",
-  );
+    logger.section(numColsB > 1 ? `BƯỚC 2 (CỘT ${col + 1}): GIẢI LY = B` : "BƯỚC 2 (B2): GIẢI LY = B");
+    logger.formula("$$y_1 = \\frac{b_1}{l_{11}}$$");
+    logger.formula(
+      "$$y_i = \\frac{b_i - \\sum_{j=1}^{i-1} l_{ij} y_j}{l_{ii}} \\quad (i = 2 \\dots n)$$",
+    );
 
-  const X = backSub(U, Y, (step) => {
-    logger.formula(step.detail);
-  });
+    const yCol = forwardSub(L, bCol, (step) => {
+      logger.formula(step.detail);
+    });
 
-  logger.result(
-    `$$X = \\begin{bmatrix} ${X.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
-  );
+    for (let i = 0; i < n; i++) finalY[i][col] = yCol[i];
+
+    logger.result(
+      `$$Y${numColsB > 1 ? `_{cột ${col+1}}` : ""} = \\begin{bmatrix} ${yCol.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+    );
+
+    logger.section(numColsB > 1 ? `BƯỚC 3 (CỘT ${col + 1}): GIẢI UX = Y` : "BƯỚC 3 (B3): GIẢI UX = Y");
+    logger.formula("$$x_n = y_n$$");
+    logger.formula(
+      "$$x_i = y_i - \\sum_{j=i+1}^n u_{ij} x_j \\quad (i = n-1 \\dots 1)$$",
+    );
+
+    const xCol = backSub(U, yCol, (step) => {
+      logger.formula(step.detail);
+    });
+
+    for (let i = 0; i < n; i++) finalX[i][col] = xCol[i];
+
+    logger.result(
+      `$$X${numColsB > 1 ? `_{cột ${col+1}}` : ""} = \\begin{bmatrix} ${xCol.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
+    );
+  }
+
+  if (numColsB > 1) {
+    logger.separator();
+    logger.section("TỔNG HỢP NGHIỆM");
+    logger.text("Ma trận X:");
+    logger.table(formatMatrixForLog(finalX));
+  }
   logger.success("Giải hệ AX = B hoàn tất.");
 }
