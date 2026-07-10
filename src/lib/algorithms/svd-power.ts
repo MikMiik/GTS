@@ -96,43 +96,32 @@ function getLargestAbsElement(v: number[]): number {
   return maxVal;
 }
 
-function nullSpaceBasis(M: Mat, tol = 1e-10): number[][] {
-  const m = M.length,
-    n = M[0].length;
-  const A = M.map((r) => [...r]);
-  const pivotCols: number[] = [];
-  let row = 0;
-  for (let col = 0; col < n && row < m; col++) {
-    let maxRow = row;
-    for (let r = row + 1; r < m; r++) {
-      if (Math.abs(A[r][col]) > Math.abs(A[maxRow][col])) maxRow = r;
+/**
+ * Hoàn chỉnh cơ sở trực chuẩn (Gram-Schmidt qua vector đơn vị chuẩn e_i).
+ * Nhận vào tập các vector đã có (đã trực chuẩn), bổ sung đủ `dim` vector.
+ * Ổn định hơn nullSpaceBasis vì không phụ thuộc ngưỡng khử Gauss.
+ */
+function completeBasis(existing: number[][], dim: number, logger: Logger, symbol: string, tol = 1e-9): number[][] {
+  const result: number[][] = existing.map((v) => [...v]);
+  for (let i = 0; i < dim && result.length < dim; i++) {
+    // Tạo vector đơn vị chuẩn e_i
+    const ei = new Array(dim).fill(0);
+    ei[i] = 1;
+    // Chiếu e_i ra khỏi tất cả các vector đã có (modified Gram-Schmidt)
+    let u = [...ei];
+    for (const v of result) {
+      u = sub(u, scale(v, dot(u, v)));
     }
-    if (Math.abs(A[maxRow][col]) < tol) continue;
-    [A[row], A[maxRow]] = [A[maxRow], A[row]];
-    const pivot = A[row][col];
-    for (let j = col; j < n; j++) A[row][j] /= pivot;
-    for (let r = 0; r < m; r++) {
-      if (r === row) continue;
-      const factor = A[r][col];
-      for (let j = col; j < n; j++) A[r][j] -= factor * A[row][j];
+    const nU = norm(u);
+    if (nU > tol) {
+      const vNew = scale(u, 1 / nU);
+      result.push(vNew);
+      logger.text(
+        `- Chọn vector đơn vị $e_{${i + 1}}$. Trừ đi hình chiếu trên các vector đã có, độ dài phần dư $\\approx ${fmtNum(nU, 5)}$. Chuẩn hóa thành $${symbol}_{${result.length}} = \\begin{bmatrix} ${fmtVec(vNew, 5)} \\end{bmatrix}^T$.`
+      );
     }
-    pivotCols.push(col);
-    row++;
   }
-  const freeCols = Array.from({ length: n }, (_, i) => i).filter(
-    (c) => !pivotCols.includes(c),
-  );
-  return freeCols.map((freeCol) => {
-    const x = new Array(n).fill(0);
-    x[freeCol] = 1;
-    for (let r = 0; r < pivotCols.length; r++) {
-      const pc = pivotCols[r];
-      x[pc] = -A[r][freeCol];
-    }
-    // normalize
-    const nX = norm(x);
-    return nX > tol ? scale(x, 1 / nX) : x;
-  });
+  return result;
 }
 
 function fmtNum(v: number, decimals = 5): string {
@@ -307,27 +296,14 @@ export function runSvdPower(
   const r = eigenValues.length;
   logger.info(`Hạng của ma trận $A$ được xác định là: $r = ${r}$`);
 
-  // Fill remaining null space if r < n
+  // Hoàn chỉnh cơ sở V nếu r < n
   if (r < n) {
     logger.text(
-      `Bổ sung ${n - r} véc-tơ cho cơ sở không gian null của $A^TA$ để lập $V$:`,
+      `Bổ sung ${n - r} véc-tơ trực chuẩn còn lại cho $V$ (Gram-Schmidt qua vector đơn vị chuẩn $e_i$):`,
     );
-    const nullBasis = nullSpaceBasis(matMul(At, A), 1e-7);
-    // Find vectors orthogonal to existing eigenVectors
-    for (const nb of nullBasis) {
-      let u = [...nb];
-      for (const ev of eigenVectors) {
-        u = sub(u, scale(ev, dot(u, ev)));
-      }
-      const nU = norm(u);
-      if (nU > 1e-7) {
-        const v = scale(u, 1 / nU);
-        eigenVectors.push(v);
-        logger.formula(
-          `$$v_{${eigenVectors.length}} = \\begin{bmatrix} ${fmtVec(v, tableDecimals)} \\end{bmatrix}^T$$`,
-        );
-      }
-      if (eigenVectors.length === n) break;
+    const completed = completeBasis(eigenVectors, n, logger, "v");
+    for (let i = r; i < completed.length; i++) {
+      eigenVectors.push(completed[i]);
     }
   }
 
@@ -352,23 +328,10 @@ export function runSvdPower(
   }
 
   if (r < m) {
-    logger.text(`Bổ sung ${m - r} véc-tơ bằng cách giải $(AA^T)u = 0$`);
-    const AAt = matMul(A, At);
-    const nullBasis = nullSpaceBasis(AAt, 1e-7);
-    for (const nb of nullBasis) {
-      let u = [...nb];
-      for (const euc of UCols) {
-        u = sub(u, scale(euc, dot(u, euc)));
-      }
-      const nU = norm(u);
-      if (nU > 1e-7) {
-        const ui = scale(u, 1 / nU);
-        UCols.push(ui);
-        logger.text(
-          `$$u_{${UCols.length}} = \\begin{bmatrix} ${fmtVec(ui, tableDecimals)} \\end{bmatrix}^T$$`,
-        );
-      }
-      if (UCols.length === m) break;
+    logger.text(`Bổ sung ${m - r} véc-tơ trực chuẩn còn lại cho $U$ (Gram-Schmidt qua vector đơn vị chuẩn $e_i$):`);
+    const completed = completeBasis(UCols, m, logger, "u");
+    for (let i = r; i < completed.length; i++) {
+      UCols.push(completed[i]);
     }
   }
 

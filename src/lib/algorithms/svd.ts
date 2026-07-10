@@ -85,43 +85,30 @@ function gramSchmidt(vecs: number[][]): number[][] {
   return result;
 }
 
-/** Tìm các vector cơ sở cho null space của M bằng Gaussian elimination */
-function nullSpaceBasis(M: Mat, tol = 1e-10): number[][] {
-  const m = M.length,
-    n = M[0].length;
-  // Copy and row-reduce
-  const A = M.map((r) => [...r]);
-  const pivotCols: number[] = [];
-  let row = 0;
-  for (let col = 0; col < n && row < m; col++) {
-    let maxRow = row;
-    for (let r = row + 1; r < m; r++) {
-      if (Math.abs(A[r][col]) > Math.abs(A[maxRow][col])) maxRow = r;
+/**
+ * Hoàn chỉnh cơ sở trực chuẩn bằng cách chiếu các vector đơn vị chuẩn $e_i$.
+ * Nhận vào tập các vector đã trực chuẩn, bổ sung đủ `dim` vector.
+ * Ổn định hơn nullSpaceBasis vì không phụ thuộc ngưỡng khử Gauss.
+ */
+function completeBasis(existing: number[][], dim: number, logger: Logger, symbol: string, tol = 1e-9): number[][] {
+  const result: number[][] = existing.map((v) => [...v]);
+  for (let i = 0; i < dim && result.length < dim; i++) {
+    const ei = new Array(dim).fill(0);
+    ei[i] = 1;
+    let u = [...ei];
+    for (const v of result) {
+      u = sub(u, scale(v, dot(v, u)));
     }
-    if (Math.abs(A[maxRow][col]) < tol) continue;
-    [A[row], A[maxRow]] = [A[maxRow], A[row]];
-    const pivot = A[row][col];
-    for (let j = col; j < n; j++) A[row][j] /= pivot;
-    for (let r = 0; r < m; r++) {
-      if (r === row) continue;
-      const factor = A[r][col];
-      for (let j = col; j < n; j++) A[r][j] -= factor * A[row][j];
+    const n = norm(u);
+    if (n > tol) {
+      const vNew = scale(u, 1 / n);
+      result.push(vNew);
+      logger.text(
+        `- Chọn vector đơn vị $e_{${i + 1}}$. Trừ đi hình chiếu trên các vector đã có, độ dài phần dư $\\approx ${fmtNum(n)}$. Chuẩn hóa thành $${symbol}_{${result.length}} = \\begin{bmatrix} ${fmtVec(vNew)} \\end{bmatrix}^T$.`
+      );
     }
-    pivotCols.push(col);
-    row++;
   }
-  const freeCols = Array.from({ length: n }, (_, i) => i).filter(
-    (c) => !pivotCols.includes(c),
-  );
-  return freeCols.map((freeCol) => {
-    const x = new Array(n).fill(0);
-    x[freeCol] = 1;
-    for (let r = 0; r < pivotCols.length; r++) {
-      const pc = pivotCols[r];
-      x[pc] = -A[r][freeCol];
-    }
-    return x;
-  });
+  return result;
 }
 
 function fmtNum(v: number, decimals = 6): string {
@@ -263,20 +250,14 @@ export function computeSVD(A: Mat, logger: Logger): SvdResult | null {
     );
   }
 
-  // Bổ sung m-r cột còn lại từ null space của AA^T
+  // Bổ sung m-r cột còn lại bằng completeBasis
   if (m > rank) {
     logger.text(
-      "- **Với $m - r$ cột còn lại:** Giải $(AA^T - 0I)u = 0$, chọn các vector cơ sở trực chuẩn $u_{r+1}, \\dots, u_m$.",
+      "- **Với $m - r$ cột còn lại:** Bổ sung véc-tơ trực chuẩn từ không gian $Null(A^T)$ (Gram-Schmidt qua vector đơn vị chuẩn $e_i$).",
     );
-    const AAt = matMul(A, At);
-    const nullVecs = nullSpaceBasis(AAt);
-    const extra = gramSchmidt([...UCols, ...nullVecs]).slice(rank);
+    const completed = completeBasis(UCols, m, logger, "u");
+    const extra = completed.slice(rank);
     UCols.push(...extra);
-    if (extra.length > 0) {
-      logger.info(
-        `Bổ sung ${extra.length} vector trực chuẩn từ null space của $AA^T$ để hoàn thành $U$.`,
-      );
-    }
   }
 
   logger.text(

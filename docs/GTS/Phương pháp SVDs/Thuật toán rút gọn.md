@@ -17,7 +17,7 @@
 - Lấy chuyển vị $V^T$.
   **Bước 5: Lập ma trận $U$**
 - **Với $r$ cột đầu ($i = \overline{1,r}$):** Tính $u_i = \frac{1}{\sigma_i}Av_i$.
-- **Với $m - r$ cột còn lại:** Giải $(AA^T - 0I)u = 0$, chọn các vector cơ sở trực chuẩn $u_{r+1}, \dots, u_m$.
+- **Với $m - r$ cột còn lại:** Chiếu Gram-Schmidt các vector đơn vị chuẩn $e_i \in \mathbb{R}^m$ lên không gian trực giao để bổ sung các vector trực chuẩn $u_{r+1}, \dots, u_m$.
 - Lập ma trận trực giao $U = \begin{bmatrix} u_1 & u_2 & \dots & u_m \end{bmatrix}$.
   **Bước 6: Khai triển SVD**
 - $A = U\Sigma V^T$.
@@ -39,7 +39,7 @@
 - Lập ma trận trực giao $V = \begin{bmatrix} v_1 & v_2 & \dots & v_n \end{bmatrix} \in \mathbb{R}^{n \times n}$.
   **Bước 4: Lập ma trận $U$**
 - **Với $r$ cột đầu ($i = \overline{1,r}$):** Tính $u_i = \frac{1}{\sqrt{\lambda_i}}Av_i$.
-- **Với $m - r$ cột còn lại:** Giải $(AA^T - 0I)u = 0$, chọn các vector cơ sở trực chuẩn $u_{r+1}, \dots, u_m$.
+- **Với $m - r$ cột còn lại:** Chiếu Gram-Schmidt các vector đơn vị chuẩn $e_i \in \mathbb{R}^m$ lên không gian trực giao để bổ sung các vector trực chuẩn $u_{r+1}, \dots, u_m$.
 - Lập ma trận trực giao $U = \begin{bmatrix} u_1 & u_2 & \dots & u_m \end{bmatrix} \in \mathbb{R}^{m \times m}$.
   **Bước 5: Lập ma trận $\Sigma^{-1}$**
 - Tính $\sigma_i = \sqrt{\lambda_i}$ với $i = \overline{1,r}$.
@@ -69,8 +69,9 @@ _Lưu ý:_ Nếu $\sigma_{\min} = 0$ ($A$ suy biến), quy ước $cond(A) \to \
 **Bước 1: Tính ma trận $M = A^TA$**
 **Bước 2: Tìm các giá trị riêng và vector riêng bằng lặp số trị**
 Lặp cho $k = 1, 2, \dots, r$ (với $r = \min(m,n)$ hoặc dừng khi $\lambda_k \approx 0$):
+
 - **Trường hợp $k=1$:** Đặt $M_1 = M$.
-- **Trường hợp $k>1$:** Dùng phương pháp xuống thang Hotelling để tìm ma trận mới:
+- **Trường hợp $k>1$:** Dùng phương pháp xuống thang để tìm ma trận mới:
   $M_k = M_{k-1} - \lambda_{k-1} v_{k-1} v_{k-1}^T$
 - **Tìm $\lambda_k, v_k$ bằng Lũy thừa trên $M_k$:**
   - Lặp $y_{m} = M_k x_{m-1}$.
@@ -78,17 +79,16 @@ Lặp cho $k = 1, 2, \dots, r$ (với $r = \min(m,n)$ hoặc dừng khi $\lambda
   - Chuẩn hóa $x_m = \frac{y_m}{\lambda_k^{(m)}}$.
   - Dừng lặp lũy thừa khi $\|x_m - x_{m-1}\|_\infty < \varepsilon$. Thu được $\lambda_k$.
   - Chuẩn hóa véc-tơ riêng về chuẩn 2: $v_k = \frac{x_m}{\|x_m\|_2}$.
-**Bước 3: Bổ sung không gian Null (nếu cần)**
-- Trực chuẩn hóa (Gram-Schmidt) với các véc-tơ còn lại thuộc Null($A^TA$) để tạo thành hệ cơ sở đầy đủ $\{v_1, \dots, v_n\}$.
-**Bước 4: Xác định ma trận $\Sigma$ và $V$**
+    **Bước 3: Bổ sung cơ sở trực chuẩn (nếu $r < n$)**
+- Chiếu Gram-Schmidt các vector đơn vị chuẩn $e_i \in \mathbb{R}^n$ để loại bỏ phần phụ thuộc tuyến tính, bổ sung các vector trực giao còn thiếu để tạo thành hệ cơ sở đầy đủ $\{v_1, \dots, v_n\}$.
+  **Bước 4: Xác định ma trận $\Sigma$ và $V$**
 - $\sigma_k = \sqrt{\lambda_k}$. Đặt lên đường chéo của $\Sigma$.
 - Ma trận $V = \begin{bmatrix} v_1 & v_2 & \dots & v_n \end{bmatrix}$.
-**Bước 5: Xác định ma trận $U$**
+  **Bước 5: Xác định ma trận $U$**
 - Tính $u_k = \frac{1}{\sigma_k} A v_k$ với $k = \overline{1, r}$.
-- Bổ sung $u_{r+1} \dots u_m$ từ không gian Null($AA^T$) nếu $r < m$.
+- Bổ sung $u_{r+1} \dots u_m$ bằng cách chiếu Gram-Schmidt các vector đơn vị chuẩn $e_i \in \mathbb{R}^m$ nếu $r < m$.
 - Ma trận $U = \begin{bmatrix} u_1 & u_2 & \dots & u_m \end{bmatrix}$.
-**Bước 6: Khai triển SVD**
+  **Bước 6: Khai triển SVD**
 - $A = U\Sigma V^T$.
-
 
 ---
