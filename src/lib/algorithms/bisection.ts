@@ -1,5 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction, fmtNum } from "./math-utils";
 export function runBisection(
   params: Record<string, string>,
   logger: Logger,
@@ -73,15 +73,9 @@ function bisectionMethod(
   }
   logger.success("✔ $$f(a) \\cdot f(b) < 0$$ — khoảng hợp lệ.");
 
-  let tableDecimals = 5;
-  let reliableDigits = 5;
-  const hasEpsilon = epsilon > 0;
-  
-  if (hasEpsilon) {
-    const prec = getPrecisionByEpsilon(epsilon);
-    tableDecimals = prec.tableDecimals;
-    reliableDigits = prec.reliableDigits;
-  }
+  const prec = getPrecisionByEpsilon(hasEpsilon ? epsilon : undefined);
+  const generalDecimals = prec.generalDecimals;
+  let reliableDigits = prec.reliableDigits;
 
   let n = 0;
   let c = 0;
@@ -107,11 +101,11 @@ function bisectionMethod(
 
     tableData.push({
       n,
-      a: formatNumber(a, tableDecimals),
-      b: formatNumber(b, tableDecimals),
-      "c (nghiệm)": formatNumber(c, tableDecimals),
-      "f(c)": formatNumber(z, tableDecimals),
-      "|b-a|": formatNumber(diff, tableDecimals),
+      a: fmtNum(a, generalDecimals),
+      b: fmtNum(b, generalDecimals),
+      "c (nghiệm)": fmtNum(c, generalDecimals),
+      "f(c)": fmtNum(z, generalDecimals),
+      "|b-a|": fmtNum(diff, generalDecimals),
     });
 
     if (z === 0 || (hasEpsilon && diff < epsilon)) break;
@@ -138,10 +132,10 @@ function bisectionMethod(
       );
     } else {
       logger.warn(`Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
-      logger.result(`Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(c, tableDecimals)}$$`);
+      logger.result(`Nghiệm xấp xỉ thu được: $$x \\approx ${fmtNum(c, generalDecimals)}$$`);
     }
   } else {
     logger.success(`✔ Hoàn thành quá trình lặp tại bước n = ${n}.`);
-    logger.result(`Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(c, tableDecimals)}$$`);
+    logger.result(`Nghiệm xấp xỉ thu được: $$x \\approx ${fmtNum(c, generalDecimals)}$$`);
   }
 }

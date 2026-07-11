@@ -1,5 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
+import { parseFraction, getPrecisionByEpsilon, fmtNum } from "./math-utils";
 import { create, all } from "mathjs";
 
 const math = create(all);
@@ -109,16 +109,12 @@ export function runNewtonSystem(params: Record<string, string>, logger: Logger):
   }
   const maxIter = parseInt(maxIterStr, 10) || 50;
 
-  let tableDecimals = 5;
-  let reliableDigits = 5;
-  if (hasTol) {
-    const prec = getPrecisionByEpsilon(tol);
-    tableDecimals = prec.tableDecimals;
-    reliableDigits = prec.reliableDigits;
-  }
+  const prec = getPrecisionByEpsilon(hasTol ? tol : undefined);
+  const generalDecimals = prec.generalDecimals;
+  const reliableDigits = prec.reliableDigits;
 
   logger.section("QUÁ TRÌNH LẶP NEWTON");
-  logger.text(`$$X^{(0)} = \\begin{bmatrix} ${x0Arr.map((v) => v.toFixed(6)).join(" & ")} \\end{bmatrix}^T$$`);
+  logger.text(`$$X^{(0)} = \\begin{bmatrix} ${x0Arr.map((v) => fmtNum(v, 6)).join(" & ")} \\end{bmatrix}^T$$`);
   if (hasTol) {
     logger.text(`Sai số cho phép: $$\\varepsilon = ${tol}$$`);
     logger.formula("Công thức: $$J(X^{(k)}) \\Delta X_k = -F(X^{(k)}), \\quad X^{(k+1)} = X^{(k)} + \\Delta X_k$$");
@@ -168,9 +164,9 @@ export function runNewtonSystem(params: Record<string, string>, logger: Logger):
     // Prepare table row
     const rowObj: Record<string, unknown> = { k: k + 1 };
     for (let i = 0; i < n; i++) {
-      rowObj[vars[i]] = Number(Xnext[i].toFixed(tableDecimals));
+      rowObj[vars[i]] = fmtNum(Xnext[i], generalDecimals);
     }
-    rowObj["||ΔX||∞"] = Number(error.toFixed(tableDecimals));
+    rowObj["||ΔX||∞"] = fmtNum(error, generalDecimals);
     tableData.push(rowObj);
 
     X = Xnext;
@@ -181,7 +177,7 @@ export function runNewtonSystem(params: Record<string, string>, logger: Logger):
       logger.separator();
       logger.success(`✔ Thỏa mãn điều kiện dừng tại bước k = ${k + 1}.`);
       logger.result(
-        `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$X \\approx \\begin{bmatrix} ${X.map((v) => Number(v.toFixed(reliableDigits))).join(" & ")} \\end{bmatrix}^T$$`,
+        `Nghiệm gần đúng (${reliableDigits} chữ số đáng tin): $$X \\approx \\begin{bmatrix} ${X.map((v) => fmtNum(v, reliableDigits)).join(" & ")} \\end{bmatrix}^T$$`,
       );
       return;
     }
@@ -192,12 +188,12 @@ export function runNewtonSystem(params: Record<string, string>, logger: Logger):
   if (hasTol) {
     logger.warn(`⚠ Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
     logger.result(
-      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X.map((v) => Number(v.toFixed(tableDecimals))).join(" & ")} \\end{bmatrix}^T$$`,
+      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X.map((v) => fmtNum(v, generalDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
     );
   } else {
     logger.success(`✔ Hoàn thành quá trình lặp tại bước k = ${maxIter}.`);
     logger.result(
-      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X.map((v) => Number(v.toFixed(tableDecimals))).join(" & ")} \\end{bmatrix}^T$$`,
+      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X.map((v) => fmtNum(v, generalDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
     );
   }
 }

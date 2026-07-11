@@ -1,5 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction, fmtNum as fmt } from "./math-utils";
 import { create, all } from "mathjs";
 
 const math = create(all);
@@ -12,11 +12,7 @@ function rnd(v: number, sig: number) {
   return Math.round(v * Math.pow(10, sig - e - 1)) / Math.pow(10, sig - e - 1);
 }
 
-function fmt(v: number, d: number) {
-  if (!Number.isFinite(v)) return String(v);
-  if (Math.abs(v) < 1e-15) return "0";
-  return v.toFixed(d);
-}
+
 
 export function runLapDonSystem(params: Record<string, string>, logger: Logger): void {
   const { vars: varsStr, phis: phisStr, x0Str, q: qIn, epsilon, maxIter: maxIterStr } = params;
@@ -92,16 +88,11 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
   const maxIter = parseInt(maxIterStr, 10) || 100;
   const eps0 = hasEpsilon ? ((1 - q) / q) * eps : 0;
   
-  let tableDecimals = 5;
-  let reliableDigits = 5;
-  
-  if (hasEpsilon) {
-    const p = getPrecisionByEpsilon(eps);
-    tableDecimals = p.tableDecimals;
-    reliableDigits = p.reliableDigits;
-  }
+  const prec = getPrecisionByEpsilon(hasEpsilon ? eps : undefined);
+  const generalDecimals = prec.generalDecimals;
+  const reliableDigits = prec.reliableDigits;
 
-  const fmtVec = (v: number[]) => `[${v.map((vi) => fmt(vi, tableDecimals)).join(", ")}]`;
+  const fmtVec = (v: number[]) => `[${v.map((vi) => fmt(vi, generalDecimals)).join(", ")}]`;
 
   // 5. Log initial info
   logger.section("Phương pháp Lặp đơn giải hệ phi tuyến");
@@ -148,7 +139,7 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
       if (d > maxDiff) maxDiff = d;
     }
 
-    tableData.push({ k: step, "X_k": fmtVec(X_curr), "||ΔX||∞": fmt(maxDiff, tableDecimals) });
+    tableData.push({ k: step, "X_k": fmtVec(X_curr), "||ΔX||∞": fmt(maxDiff, generalDecimals) });
 
     if (hasEpsilon && maxDiff < eps0) {
       break;
@@ -169,13 +160,13 @@ export function runLapDonSystem(params: Record<string, string>, logger: Logger):
     } else {
       logger.warn(`⚠ Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
       logger.result(
-        `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X_curr.map((v) => fmt(v, tableDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
+        `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X_curr.map((v) => fmt(v, generalDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
       );
     }
   } else {
     logger.success(`✔ Hoàn thành quá trình lặp tại bước k = ${step}.`);
     logger.result(
-      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X_curr.map((v) => fmt(v, tableDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
+      `Nghiệm xấp xỉ thu được: $$X \\approx \\begin{bmatrix} ${X_curr.map((v) => fmt(v, generalDecimals)).join(" & ")} \\end{bmatrix}^T$$`,
     );
   }
 }

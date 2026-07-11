@@ -1,4 +1,4 @@
-import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction, fmtNum, fmtVec, fmtMat } from "./math-utils";
 import type { Logger } from "@/types/solver";
 
 type Mat = number[][];
@@ -124,19 +124,7 @@ function completeBasis(existing: number[][], dim: number, logger: Logger, symbol
   return result;
 }
 
-function fmtNum(v: number, decimals = 5): string {
-  if (Math.abs(v) < 1e-10) return "0";
-  return parseFloat(v.toFixed(decimals)).toString();
-}
 
-function fmtVec(v: number[], d?: number): string {
-  return v.map((x) => fmtNum(x, d)).join(" & ");
-}
-
-function fmtMat(M: Mat, d?: number): string {
-  const rows = M.map((r) => r.map((x) => fmtNum(x, d)).join(" & "));
-  return `\\begin{bmatrix} ${rows.join(" \\\\ ")} \\end{bmatrix}`;
-}
 
 export function runSvdPower(
   params: Record<string, string>,
@@ -168,7 +156,7 @@ export function runSvdPower(
     return;
   }
 
-  const { tableDecimals } = getPrecisionByEpsilon(eps);
+  const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon(eps);
   const m = A.length;
   const n = A[0].length;
 
@@ -180,17 +168,17 @@ export function runSvdPower(
   }
 
   logger.section("THÔNG TIN ĐẦU VÀO");
-  logger.formula(`$$A = ${fmtMat(A, tableDecimals)}$$`);
+  logger.formula(`$$A = ${fmtMat(A, matrixDecimals)}$$`);
   logger.info(`Kích thước: $${m} \\times ${n}$`);
   logger.formula(
-    `$$x_0 = \\begin{bmatrix} ${fmtVec(x0, tableDecimals)} \\end{bmatrix}^T$$`,
+    `$$x_0 = \\begin{bmatrix} ${fmtVec(x0, generalDecimals)} \\end{bmatrix}^T$$`,
   );
   logger.info(`$$\\varepsilon = ${eps}, N_{\\max} = ${maxIter}$$`);
 
   logger.step("**Bước 1: Tính ma trận $A^TA$**");
   const At = transpose(A);
   let M = matMul(At, A);
-  logger.formula(`$$A^T A = ${fmtMat(M, tableDecimals)}$$`);
+  logger.formula(`$$A^T A = ${fmtMat(M, matrixDecimals)}$$`);
 
   logger.step("**Bước 2: Tìm các giá trị riêng bằng Lũy thừa và Xuống thang**");
 
@@ -209,7 +197,7 @@ export function runSvdPower(
       const term = outerProduct(vPrev, vPrev).map((row) => scale(row, lamPrev));
       M = subMat(M, term);
       logger.formula(
-        `$$M_{${step}} = M_{${step - 1}} - \\lambda_{${step - 1}} v_{${step - 1}} v_{${step - 1}}^T = ${fmtMat(M, tableDecimals)}$$`,
+        `$$M_{${step}} = M_{${step - 1}} - \\lambda_{${step - 1}} v_{${step - 1}} v_{${step - 1}}^T = ${fmtMat(M, matrixDecimals)}$$`,
       );
     }
 
@@ -219,7 +207,7 @@ export function runSvdPower(
     let mk = 0;
     const tableData: Record<string, unknown>[] = [];
     const xCols0 = Object.fromEntries(
-      x.map((_, i) => [`$(x_k)_{${i + 1}}$`, fmtNum(x[i], tableDecimals)]),
+      x.map((_, i) => [`$(x_k)_{${i + 1}}$`, fmtNum(x[i], generalDecimals)]),
     );
     tableData.push({
       $k$: k,
@@ -245,14 +233,14 @@ export function runSvdPower(
       const xCols = Object.fromEntries(
         xNext.map((_, i) => [
           `$(x_k)_{${i + 1}}$`,
-          fmtNum(xNext[i], tableDecimals),
+          fmtNum(xNext[i], generalDecimals),
         ]),
       );
       tableData.push({
         $k$: k,
         ...xCols,
-        $m_k$: fmtNum(mk, tableDecimals),
-        "$\\|x_k - x_{k-1}\\|_\\infty$": fmtNum(err, tableDecimals),
+        $m_k$: fmtNum(mk, generalDecimals),
+        "$\\|x_k - x_{k-1}\\|_\\infty$": fmtNum(err, generalDecimals),
       });
 
       x = xNext;
@@ -278,7 +266,7 @@ export function runSvdPower(
 
     logger.table(tableData);
     logger.result(
-      `$$\\lambda_{${step}} \\approx ${fmtNum(mk, tableDecimals)}$$`,
+      `$$\\lambda_{${step}} \\approx ${fmtNum(mk, generalDecimals)}$$`,
     );
 
     // Normalize v_k to norm 2
@@ -286,7 +274,7 @@ export function runSvdPower(
     const v = scale(x, 1 / nX);
     logger.text(`Véc-tơ riêng trực chuẩn (chuẩn 2 = 1):`);
     logger.formula(
-      `$$v_{${step}} = \\begin{bmatrix} ${fmtVec(v, tableDecimals)} \\end{bmatrix}^T$$`,
+      `$$v_{${step}} = \\begin{bmatrix} ${fmtVec(v, generalDecimals)} \\end{bmatrix}^T$$`,
     );
 
     eigenValues.push(mk);
@@ -312,9 +300,9 @@ export function runSvdPower(
   for (let i = 0; i < r; i++) {
     Sigma[i][i] = Math.sqrt(eigenValues[i]);
   }
-  logger.formula(`$$\\Sigma = ${fmtMat(Sigma, tableDecimals)}$$`);
+  logger.formula(`$$\\Sigma = ${fmtMat(Sigma, matrixDecimals)}$$`);
   const V = transpose(eigenVectors);
-  logger.formula(`$$V = ${fmtMat(V, tableDecimals)}$$`);
+  logger.formula(`$$V = ${fmtMat(V, matrixDecimals)}$$`);
 
   logger.step("**Bước 5: Lập ma trận $U$**");
   const UCols: number[][] = [];
@@ -323,7 +311,7 @@ export function runSvdPower(
     const ui = scale(Av, 1 / Math.sqrt(eigenValues[i]));
     UCols.push(ui);
     logger.text(
-      `$$u_{${i + 1}} = \\frac{1}{\\sigma_{${i + 1}}} A v_{${i + 1}} = \\begin{bmatrix} ${fmtVec(ui, tableDecimals)} \\end{bmatrix}^T$$`,
+      `$$u_{${i + 1}} = \\frac{1}{\\sigma_{${i + 1}}} A v_{${i + 1}} = \\begin{bmatrix} ${fmtVec(ui, generalDecimals)} \\end{bmatrix}^T$$`,
     );
   }
 
@@ -336,7 +324,7 @@ export function runSvdPower(
   }
 
   const U = transpose(UCols);
-  logger.formula(`$$U = ${fmtMat(U, tableDecimals)}$$`);
+  logger.formula(`$$U = ${fmtMat(U, matrixDecimals)}$$`);
 
   logger.step("**Bước 6: Khai triển SVD**");
   logger.formula(`$$A = U \\Sigma V^T$$`);
@@ -348,13 +336,13 @@ export function runSvdPower(
       "Theo yêu cầu phổ biến của các đề thi, dưới đây là kết quả trích xuất phần tử trội nhất (ứng với $\\sigma_1$):",
     );
     logger.formula(
-      `- **Giá trị kỳ dị lớn nhất:** $\\sigma_1 = ${fmtNum(Math.sqrt(eigenValues[0]), tableDecimals)}$`,
+      `- **Giá trị kỳ dị lớn nhất:** $\\sigma_1 = ${fmtNum(Math.sqrt(eigenValues[0]), generalDecimals)}$`,
     );
     logger.formula(
-      `- **Vector kỳ dị phải (tương ứng $\\sigma_1$):** $v_1 = \\begin{bmatrix} ${fmtVec(eigenVectors[0], tableDecimals)} \\end{bmatrix}^T$`,
+      `- **Vector kỳ dị phải (tương ứng $\\sigma_1$):** $v_1 = \\begin{bmatrix} ${fmtVec(eigenVectors[0], generalDecimals)} \\end{bmatrix}^T$`,
     );
     logger.formula(
-      `- **Vector kỳ dị trái (tương ứng $\\sigma_1$):** $u_1 = \\begin{bmatrix} ${fmtVec(UCols[0], tableDecimals)} \\end{bmatrix}^T$`,
+      `- **Vector kỳ dị trái (tương ứng $\\sigma_1$):** $u_1 = \\begin{bmatrix} ${fmtVec(UCols[0], generalDecimals)} \\end{bmatrix}^T$`,
     );
   }
 
@@ -366,7 +354,7 @@ export function runSvdPower(
     const totalVariance = eigenValues.reduce((sum, val) => sum + val, 0);
     const normAF = Math.sqrt(totalVariance);
     logger.formula(
-      `$$\\|A\\|_F = \\sqrt{\\sum_{i=1}^{${r}} \\sigma_i^2} = ${fmtNum(normAF, tableDecimals)}$$`,
+      `$$\\|A\\|_F = \\sqrt{\\sum_{i=1}^{${r}} \\sigma_i^2} = ${fmtNum(normAF, generalDecimals)}$$`,
     );
 
     let finalR = 1;
@@ -413,7 +401,7 @@ export function runSvdPower(
       `Ma trận xấp xỉ $\\hat{A}_{${finalR}} = \\sum_{i=1}^{${finalR}} \\sigma_i u_i v_i^T$:`,
     );
     logger.formula(
-      `$$\\hat{A}_{${finalR}} = ${fmtMat(A_approx, tableDecimals)}$$`,
+      `$$\\hat{A}_{${finalR}} = ${fmtMat(A_approx, matrixDecimals)}$$`,
     );
   }
 }

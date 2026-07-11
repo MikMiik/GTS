@@ -38,6 +38,7 @@ export type AlgorithmKey =
   | "svd-power"
   | "pseudoinverse"
   | "condition-number"
+  | "condition-number-power"
   | "gram-schmidt"
   | "vien-quanh";
 
@@ -89,4 +90,4 @@ export const NONLINEAR_SYSTEM_METHODS = [
 
 export const EIGENVALUE_METHODS = ["danilevsky", "power-eigen", "xuong-thang"] as const;
 
-export const SVD_METHODS = ["svd", "pseudoinverse", "condition-number", "gram-schmidt"] as const;
+export const SVD_METHODS = ["svd", "svd-power", "pseudoinverse", "condition-number", "condition-number-power", "gram-schmidt"] as const;

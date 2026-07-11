@@ -5,8 +5,8 @@ import { create, all } from "mathjs";
 const math = create(all);
 
 function formatNum(n: number): string {
-  if (Math.abs(n) < 1e-10) return "0";
-  return n.toFixed(4).replace(/\.?0+$/, "");
+  if (Math.abs(n) < 1e-10) return (0).toFixed(4);
+  return n.toFixed(4);
 }
 
 function formatVec(v: number[]): string {

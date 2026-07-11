@@ -1,5 +1,7 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { parseFraction, getPrecisionByEpsilon, fmtNum } from "./math-utils";
+
+const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon(undefined);
 
 export function runGauss(params: Record<string, string>, logger: Logger): void {
   const { matA, matB } = params;
@@ -41,7 +43,7 @@ function fmtMatrix(M: number[][], n: number): Record<string,string>[] {
     const obj: Record<string,string> = {};
     row.forEach((val,c) => {
       const name = c<n ? `x${c+1}` : `b${c-n+1}`;
-      obj[name] = Math.abs(val)<1e-10 ? "0.0000" : val.toFixed(4);
+      obj[name] = Math.abs(val)<1e-10 ? "0" : fmtNum(val, matrixDecimals);
     });
     return obj;
   });
@@ -53,17 +55,17 @@ function fmtExpr(expr: Expr): string {
   const hasC = Math.abs(c)>1e-10;
   if(!hasC && entries.length===0) return "0";
   const parts: string[] = [];
-  if(hasC) parts.push(c.toFixed(4));
+  if(hasC) parts.push(fmtNum(c, generalDecimals));
   for(const [t,coeff] of entries){
     if(parts.length===0){
       if(Math.abs(coeff-1)<1e-10) parts.push(t);
       else if(Math.abs(coeff+1)<1e-10) parts.push(`-${t}`);
-      else parts.push(`${coeff.toFixed(4)}*${t}`);
+      else parts.push(`${fmtNum(coeff, generalDecimals)}*${t}`);
     } else {
       const sign = coeff>=0?"+":"-";
       const abs = Math.abs(coeff);
       if(Math.abs(abs-1)<1e-10) parts.push(`${sign} ${t}`);
-      else parts.push(`${sign} ${abs.toFixed(4)}*${t}`);
+      else parts.push(`${sign} ${fmtNum(abs, generalDecimals)}*${t}`);
     }
   }
   return parts.join(" ");
@@ -82,12 +84,12 @@ function solveGauss(A: number[][], B: number[][], logger: Logger) {
     if(maxVal<1e-10){ logger.text(`Cột x${j+1} toàn 0, bỏ qua.`); j++; continue; }
     if(maxRow!==i){ [M[i],M[maxRow]]=[M[maxRow],M[i]]; logger.info(`Hoán vị hàng ${i+1} ↔ hàng ${maxRow+1}`); logger.table(fmtMatrix(M,n)); }
     logger.step(`[Bước ${step}] Chọn phần tử khử:`);
-    logger.formula(`$$a_{${i+1},${j+1}} = ${M[i][j].toFixed(4)}$$`);
+    logger.formula(`$$a_{${i+1},${j+1}} = ${fmtNum(M[i][j], generalDecimals)}$$`);
     const ops: string[] = []; let changed=false;
     for(let k=i+1;k<m;k++){
       if(Math.abs(M[k][j])>1e-10){
         const factor=M[k][j]/M[i][j];
-        ops.push(`L_{${k+1}} = L_{${k+1}} - (${factor.toFixed(4)}) L_{${i+1}}`);
+        ops.push(`L_{${k+1}} = L_{${k+1}} - (${fmtNum(factor, generalDecimals)}) L_{${i+1}}`);
         for(let col=j;col<n+p;col++) M[k][col]-=factor*M[i][col];
         M[k][j]=0; changed=true;
       }
@@ -101,7 +103,7 @@ function solveGauss(A: number[][], B: number[][], logger: Logger) {
   for(let r=0;r<m;r++){
     if(!pivotRowSet.has(r)){
       for(let k=0;k<p;k++){
-        if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho $$0 = ${M[r][n+k].toFixed(4)}$$`); return null; }
+        if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho $$0 = ${fmtNum(M[r][n+k], generalDecimals)}$$`); return null; }
       }
     }
   }

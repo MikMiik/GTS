@@ -1,5 +1,5 @@
 import type { Logger } from "@/types/solver";
-import { getPrecisionByEpsilon, parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction, fmtNum } from "./math-utils";
 export function runTiepTuyen(
   params: Record<string, string>,
   logger: Logger,
@@ -74,11 +74,7 @@ function roundBySignificantDigits(value: number, significantDigits: number) {
   return Math.round(value * factor) / factor;
 }
 
-function formatNumber(value: number, decimals: number): string {
-  if (!Number.isFinite(value)) return String(value);
-  if (Math.abs(value) < 1e-15) return "0";
-  return value.toFixed(decimals);
-}
+
 
 function newtonMethod(
   f: (x: number) => number,
@@ -101,10 +97,10 @@ function newtonMethod(
     ddfb = ddf(b);
 
   logger.info(
-    `$$f(a)=${fa.toFixed(6)}, f''(a)=${ddfa.toFixed(6)}, f(a) \\cdot f''(a) = ${(fa * ddfa).toFixed(6)}$$`,
+    `$$f(a)=${fmtNum(fa, 6)}, f''(a)=${fmtNum(ddfa, 6)}, f(a) \\cdot f''(a) = ${fmtNum(fa * ddfa, 6)}$$`,
   );
   logger.info(
-    `$$f(b)=${fb.toFixed(6)}, f''(b)=${ddfb.toFixed(6)}, f(b) \\cdot f''(b) = ${(fb * ddfb).toFixed(6)}$$`,
+    `$$f(b)=${fmtNum(fb, 6)}, f''(b)=${fmtNum(ddfb, 6)}, f(b) \\cdot f''(b) = ${fmtNum(fb * ddfb, 6)}$$`,
   );
 
   if (f(a) * ddf(a) > 0) {
@@ -118,15 +114,10 @@ function newtonMethod(
     x_curr = b;
   }
 
-  let tableDecimals = 5;
-  let reliableDigits = 5;
   const hasEpsilon = epsilon > 0;
-  
-  if (hasEpsilon) {
-    const prec = getPrecisionByEpsilon(epsilon);
-    tableDecimals = prec.tableDecimals;
-    reliableDigits = prec.reliableDigits;
-  }
+  const prec = getPrecisionByEpsilon(hasEpsilon ? epsilon : undefined);
+  const generalDecimals = prec.generalDecimals;
+  const reliableDigits = prec.reliableDigits;
 
   let n = 0;
   let fx = f(x_curr);
@@ -135,7 +126,7 @@ function newtonMethod(
 
   tableData.push({
     n: 0,
-    xₙ: formatNumber(x_curr, tableDecimals),
+    xₙ: fmtNum(x_curr, generalDecimals),
     "f(xₙ)": fx.toExponential(4),
     "sai số |f|/m₁": errorEstimate.toExponential(4),
   });
@@ -164,7 +155,7 @@ function newtonMethod(
 
     tableData.push({
       n,
-      xₙ: formatNumber(x_curr, tableDecimals),
+      xₙ: fmtNum(x_curr, generalDecimals),
       "f(xₙ)": fx.toExponential(4),
       "sai số |f|/m₁": errorEstimate.toExponential(4),
     });
@@ -186,13 +177,13 @@ function newtonMethod(
     } else {
       logger.warn(`⚠ Dừng lặp sau ${maxIter} vòng do đạt giới hạn, chưa thỏa mãn sai số.`);
       logger.result(
-        `Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(x_curr, tableDecimals)}$$`,
+        `Nghiệm xấp xỉ thu được: $$x \\approx ${fmtNum(x_curr, generalDecimals)}$$`,
       );
     }
   } else {
     logger.success(`✔ Hoàn thành quá trình lặp tại bước n = ${n}.`);
     logger.result(
-      `Nghiệm xấp xỉ thu được: $$x \\approx ${formatNumber(x_curr, tableDecimals)}$$`,
+      `Nghiệm xấp xỉ thu được: $$x \\approx ${fmtNum(x_curr, generalDecimals)}$$`,
     );
   }
 }

@@ -171,12 +171,12 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
   if (isNaN(eps) || eps <= 0) { logger.error("ε phải là số dương."); return; }
   if (isNaN(maxIter) || maxIter <= 0) { logger.error("N phải là số nguyên dương."); return; }
 
-  const { tableDecimals } = getPrecisionByEpsilon(eps);
-  setFormattingDecimals(tableDecimals);
+  const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon(eps);
+  setFormattingDecimals(generalDecimals, matrixDecimals);
 
   logger.section("THÔNG TIN ĐẦU VÀO");
   logger.text("Ma trận A:");
-  logger.table(formatMatrixForLog(A));
+  logger.table(formatMatrixForLog(A, matrixDecimals));
   logger.info(`$$\\lambda_1 = ${l1}$$`);
   logger.info(`$$v_1 = \\begin{bmatrix} ${v1.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
   logger.info(`$$y_0 = \\begin{bmatrix} ${y0.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`);
@@ -218,7 +218,7 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
     B = subtractMatrix(A, L1_v1_xT);
     logger.text("- $B = A - \\lambda_1 v_1 x^T$.");
     logger.text("Ma trận xuống thang B:");
-    logger.table(formatMatrixForLog(B));
+    logger.table(formatMatrixForLog(B, matrixDecimals));
     
     // 4. Lũy thừa
     logger.step("**Bước 4: Tìm $\\lambda_2$ bằng phương pháp lũy thừa trên $B$**");
@@ -267,14 +267,14 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
       Theta[i][maxIndex] -= v1Norm[i];
     }
     logger.text("Ma trận khử Θ:");
-    logger.table(formatMatrixForLog(Theta));
+    logger.table(formatMatrixForLog(Theta, matrixDecimals));
 
     // 3. Tính A^(2)
     logger.step("**Bước 3: Lập ma trận xuống thang $A^{(2)}$**");
     B = multiplyMatrix(Theta, A);
     logger.text("- $A^{(2)} = \\Theta A$.");
     logger.text("Ma trận xuống thang $A^{(2)}$:");
-    logger.table(formatMatrixForLog(B));
+    logger.table(formatMatrixForLog(B, matrixDecimals));
 
     // 4. Lũy thừa
     logger.step("**Bước 4: Tìm $\\lambda_2$ bằng phương pháp lũy thừa trên $A^{(2)}$**");
@@ -305,7 +305,7 @@ export function runXuongThang(params: Record<string, string>, logger: Logger): v
     B = subtractMatrix(A, L1_v1_v1T);
     logger.text("- $A_1 = A - \\lambda_1 v_1' (v_1')^T$");
     logger.text("Ma trận xuống thang $A_1$:");
-    logger.table(formatMatrixForLog(B));
+    logger.table(formatMatrixForLog(B, matrixDecimals));
 
     // 3. Lũy thừa
     logger.step("**Bước 3: Tìm $\\lambda_2$ bằng phương pháp lũy thừa trên $A_1$**");

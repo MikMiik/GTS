@@ -1,5 +1,5 @@
 import { create, all } from "mathjs";
-import { parseFraction } from "./math-utils";
+import { parseFraction, fmtNum, fmtMat } from "./math-utils";
 import type { Logger } from "@/types/solver";
 
 const math = create(all);
@@ -38,15 +38,7 @@ function matMul(A: Mat, B: Mat): Mat {
   );
 }
 
-function fmtNum(v: number): string {
-  if (Math.abs(v) < 1e-10) return "0";
-  return String(parseFloat(v.toFixed(6)));
-}
 
-function fmtMat(M: Mat): string {
-  const rows = M.map((r) => r.map((x) => fmtNum(x)).join(" & "));
-  return `\\begin{bmatrix} ${rows.join(" \\\\ ")} \\end{bmatrix}`;
-}
 
 export function runConditionNumber(params: Record<string, string>, logger: Logger): void {
   let A: Mat;

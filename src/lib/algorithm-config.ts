@@ -19,6 +19,7 @@ import { runSvd } from "@/lib/algorithms/svd";
 import { runSvdPower } from "@/lib/algorithms/svd-power";
 import { runPseudoinverse } from "@/lib/algorithms/pseudoinverse";
 import { runConditionNumber } from "@/lib/algorithms/condition-number";
+import { runConditionNumberPower } from "@/lib/algorithms/condition-number-power";
 import { runGramSchmidt } from "@/lib/algorithms/gram-schmidt";
 import { runVienQuanh } from "@/lib/algorithms/vien-quanh";
 import type { AlgoConfig, AlgorithmKey, Logger } from "@/types/solver";
@@ -268,6 +269,17 @@ export const ALGORITHM_CONFIG: Record<AlgorithmKey, AlgoConfig> = {
     },
     run: runConditionNumber,
   },
+  "condition-number-power": {
+    title: "Số Điều Kiện (Lũy thừa)",
+    subtitle: "Tính hệ số điều kiện kết hợp PP Lũy thừa và Xuống thang",
+    icon: "κ",
+    defaultValues: {
+      matA: "4 2\n1 3",
+      x0: "1 1",
+      epsilon: "1e-4",
+    },
+    run: runConditionNumberPower,
+  },
   "gram-schmidt": {
     title: "Trực chuẩn Gram-Schmidt",
     subtitle: "Trực giao & Trực chuẩn hóa tập vector — Gram-Schmidt",
@@ -317,6 +329,7 @@ export const SIDEBAR_SECTIONS = [
       "svd-power",
       "pseudoinverse",
       "condition-number",
+      "condition-number-power",
       "gram-schmidt",
     ] as AlgorithmKey[],
   },

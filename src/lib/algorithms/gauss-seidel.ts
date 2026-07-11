@@ -62,16 +62,16 @@ function parseVector(text: string): number[] {
 
 function fmt(v: number, d = currentDecimals): string {
   if (!Number.isFinite(v)) return String(v);
-  if (Math.abs(v) < 1e-15) return "0";
+  if (Math.abs(v) < 1e-10) return (0).toFixed(d);
   return v.toFixed(d);
 }
 
-function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
+function formatMatrixForLog(m: NumMatrix, d = currentDecimals): Record<string, string>[] {
   const cols = m[0]?.length ?? 0;
   return m.map((row, i) => {
     const obj: Record<string, string> = { hàng: String(i + 1) };
     for (let j = 0; j < cols; j++) {
-      obj[`c${j + 1}`] = fmt(row[j]);
+      obj[`c${j + 1}`] = fmt(row[j], d);
     }
     return obj;
   });
@@ -316,11 +316,11 @@ export function runGaussSeidel(
       logger.error("ε phải là số dương.");
       return;
     }
-    const prec = getPrecisionByEpsilon(eps);
-    currentDecimals = prec.tableDecimals;
-  } else {
-    currentDecimals = 5;
   }
+
+  const prec = getPrecisionByEpsilon(hasEpsilon ? eps : undefined);
+  currentDecimals = prec.generalDecimals;
+  const matrixDecimals = prec.matrixDecimals;
 
   if (A.length === 0) {
     logger.error("Ma trận không hợp lệ.");
@@ -359,7 +359,7 @@ export function runGaussSeidel(
   logger.info(`Dạng giải: ${isIterativeForm ? "Hệ lặp $x = Bx + d$" : "Hệ tuyến tính $Ax = b$"}`);
   logger.info(`Kích thước: ${n} × ${n}`);
   logger.text(`Ma trận ${isIterativeForm ? "B" : "A"}:`);
-  logger.table(formatMatrixForLog(A));
+  logger.table(formatMatrixForLog(A, matrixDecimals));
   logger.info(
     `$$${isIterativeForm ? "d" : "b"} = \\begin{bmatrix} ${b.map((v) => fmt(v)).join(" & ")} \\end{bmatrix}^T$$`,
   );

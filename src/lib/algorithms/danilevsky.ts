@@ -1,9 +1,11 @@
 import { matrix, multiply, identity } from "mathjs";
 import type { Matrix } from "mathjs";
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction, fmtNum } from "./math-utils";
 
 const EPS = 1e-10;
+
+const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon(undefined);
 
 /** Ma trận số thực dạng mảng 2 chiều */
 type NumMatrix = number[][];
@@ -69,8 +71,8 @@ class Complex {
   }
 
   toString(decimals = 4) {
-    const r = this.re.toFixed(decimals);
-    const i = Math.abs(this.im).toFixed(decimals);
+    const r = fmtNum(this.re, Math.max(0, decimals));
+    const i = fmtNum(Math.abs(this.im), Math.max(0, decimals));
     if (Math.abs(this.im) < 1e-10) return r;
     return `${r} ${this.im >= 0 ? "+" : "-"} ${i}i`;
   }
@@ -110,15 +112,15 @@ function parseMatrix(text: string): NumMatrix {
   });
 }
 
-function formatNum(value: number): string {
-  return Math.abs(value) < EPS ? "0.0000" : value.toFixed(4);
+function formatNum(value: number, decimals: number = generalDecimals): string {
+  return Math.abs(value) < EPS ? "0" : fmtNum(value, decimals);
 }
 
-function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
+function formatMatrixForLog(m: NumMatrix, d: number = matrixDecimals): Record<string, string>[] {
   return m.map((row, rowIndex) => {
     const obj: Record<string, string> = { Hàng: `H${rowIndex + 1}` };
     row.forEach((val, colIndex) => {
-      obj[`Cột ${colIndex + 1}`] = formatNum(val);
+      obj[`Cột ${colIndex + 1}`] = formatNum(val, d);
     });
     return obj;
   });
@@ -129,10 +131,11 @@ function logTransformMatrixAfterUpdate(
   logger: Logger,
   formula: string,
   p: NumMatrix,
+  mDecimals: number = matrixDecimals
 ) {
   logger.formula(`$$${formula}$$`);
   logger.text("- Ma trận chuyển cơ sở $P$ (sau cập nhật):");
-  logger.table(formatMatrixForLog(p));
+  logger.table(formatMatrixForLog(p, mDecimals));
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +214,7 @@ function findPolynomialRoots(
   return roots;
 }
 
-function formatCharacteristicPolynomial(poly: Polynomial, matrixSize: number): string {
+function formatCharacteristicPolynomial(poly: Polynomial, matrixSize: number, decimals: number = generalDecimals): string {
   const degree = poly.length - 1;
   const overallSign = matrixSize % 2 === 0 ? 1 : -1;
   let polyStr = "";
@@ -226,7 +229,7 @@ function formatCharacteristicPolynomial(poly: Polynomial, matrixSize: number): s
     let termStr = "";
 
     if (absCoeff !== 1 || power === 0) {
-      termStr = absCoeff.toFixed(4);
+      termStr = fmtNum(absCoeff, decimals);
     }
     if (power > 0) {
       termStr += "λ";
@@ -344,12 +347,12 @@ function applyTransformToVector(
   return result;
 }
 
-function formatComplexVector(vector: Complex[]): string {
+function formatComplexVector(vector: Complex[], decimals: number = generalDecimals): string {
   return vector
     .map((v) => {
       const re = cleanNearZero(v.re);
       const im = cleanNearZero(v.im);
-      return new Complex(re, im).toString(4);
+      return new Complex(re, im).toString(decimals);
     })
     .join(", ");
 }

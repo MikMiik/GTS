@@ -1,9 +1,9 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { parseFraction, fmtNum, fmtVec as fmtV, getPrecisionByEpsilon } from "./math-utils";
 
 export type NumMatrix = number[][];
 
-export const TABLE_DECIMALS = 4;
+export const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon(undefined);
 export const PIVOT_EPS = 1e-10;
 
 // ---------------------------------------------------------------------------
@@ -64,22 +64,20 @@ export function validateSquareMatrix(A: NumMatrix): string | null {
 // Định dạng số
 // ---------------------------------------------------------------------------
 
-export function fmt(v: number, d = TABLE_DECIMALS): string {
-  if (!Number.isFinite(v)) return String(v);
-  if (Math.abs(v) < 1e-15) return "0";
-  return v.toFixed(d);
+export function fmt(v: number, d = generalDecimals): string {
+  return fmtNum(v, d);
 }
 
 export function formatVec(vec: number[]): string {
-  return `[${vec.map((v) => fmt(v)).join(", ")}]`;
+  return fmtV(vec, generalDecimals);
 }
 
-export function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
+export function formatMatrixForLog(m: NumMatrix, d: number = matrixDecimals): Record<string, string>[] {
   const cols = m[0]?.length ?? 0;
   return m.map((row, i) => {
     const obj: Record<string, string> = { hàng: String(i + 1) };
     for (let j = 0; j < cols; j++) {
-      obj[`c${j + 1}`] = fmt(row[j]);
+      obj[`c${j + 1}`] = fmt(row[j], d);
     }
     return obj;
   });

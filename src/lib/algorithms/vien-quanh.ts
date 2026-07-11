@@ -1,4 +1,5 @@
 import type { Logger } from "@/types/solver";
+import { getPrecisionByEpsilon, fmtNum, fmtVec, fmtMat } from "./math-utils";
 
 type Mat = number[][];
 
@@ -74,21 +75,7 @@ function scaleVec(v: number[], s: number): number[] {
   return v.map((x) => x * s);
 }
 
-function fmtNum(v: number, decimals = 5): string {
-  if (Math.abs(v) < 1e-12) return "0";
-  return parseFloat(v.toFixed(decimals)).toString();
-}
-
-function fmtVec(v: number[], d?: number): string {
-  return v.map((x) => fmtNum(x, d)).join(" & ");
-}
-
-function fmtMat(M: Mat, d?: number): string {
-  const rows = M.map((r) => r.map((x) => fmtNum(x, d)).join(" & "));
-  return `\\begin{bmatrix} ${rows.join(" \\\\ ")} \\end{bmatrix}`;
-}
-
-function borderingInverse(A: Mat, decimals: number, logger: Logger, matrixName: string = "A"): Mat | null {
+function borderingInverse(A: Mat, matrixDecimals: number, generalDecimals: number, logger: Logger, matrixName: string = "A"): Mat | null {
   const n = A.length;
   
   if (Math.abs(A[0][0]) < 1e-12) {
@@ -98,8 +85,8 @@ function borderingInverse(A: Mat, decimals: number, logger: Logger, matrixName: 
 
   let Ainv: Mat = [[1 / A[0][0]]];
   logger.step(`**Khởi tạo (k = 1)**`);
-  logger.formula(`$$${matrixName}_1 = \\begin{bmatrix} ${fmtNum(A[0][0], decimals)} \\end{bmatrix}$$`);
-  logger.formula(`$$${matrixName}_1^{-1} = \\begin{bmatrix} ${fmtNum(Ainv[0][0], decimals)} \\end{bmatrix}$$`);
+  logger.formula(`$$${matrixName}_1 = \\begin{bmatrix} ${fmtNum(A[0][0], generalDecimals)} \\end{bmatrix}$$`);
+  logger.formula(`$$${matrixName}_1^{-1} = \\begin{bmatrix} ${fmtNum(Ainv[0][0], generalDecimals)} \\end{bmatrix}$$`);
 
   for (let k = 2; k <= n; k++) {
     logger.step(`**Lặp viền quanh cấp k = ${k}**`);
@@ -115,14 +102,14 @@ function borderingInverse(A: Mat, decimals: number, logger: Logger, matrixName: 
     }
     
     logger.text(`- Trích xuất ma trận viền ${matrixName}_${k}:`);
-    logger.formula(`$$\\alpha_{${k-1},1} = \\begin{bmatrix} ${fmtVec(u, decimals)} \\end{bmatrix}^T, \\quad \\alpha_{1,${k-1}} = \\begin{bmatrix} ${fmtVec(v, decimals)} \\end{bmatrix}, \\quad a_{${k}${k}} = ${fmtNum(akk, decimals)}$$`);
+    logger.formula(`$$\\alpha_{${k-1},1} = \\begin{bmatrix} ${fmtVec(u, generalDecimals)} \\end{bmatrix}^T, \\quad \\alpha_{1,${k-1}} = \\begin{bmatrix} ${fmtVec(v, generalDecimals)} \\end{bmatrix}, \\quad a_{${k}${k}} = ${fmtNum(akk, generalDecimals)}$$`);
 
     // m = akk - v * Ainv * u
     const Ainv_u = matVecMul(Ainv, u);
     const v_Ainv_u = dot(v, Ainv_u);
     const m = akk - v_Ainv_u;
     
-    logger.formula(`$$m_${k} = a_{${k}${k}} - \\alpha_{1,${k-1}} ${matrixName}_{${k-1}}^{-1} \\alpha_{${k-1},1} = ${fmtNum(akk, decimals)} - ${fmtNum(v_Ainv_u, decimals)} = ${fmtNum(m, decimals)}$$`);
+    logger.formula(`$$m_${k} = a_{${k}${k}} - \\alpha_{1,${k-1}} ${matrixName}_{${k-1}}^{-1} \\alpha_{${k-1},1} = ${fmtNum(akk, generalDecimals)} - ${fmtNum(v_Ainv_u, generalDecimals)} = ${fmtNum(m, generalDecimals)}$$`);
 
     if (Math.abs(m) < 1e-12) {
       logger.error(`Định thức con $m_{${k}} \\approx 0$. Phương pháp viền quanh thất bại trên ma trận này.`);
@@ -140,10 +127,10 @@ function borderingInverse(A: Mat, decimals: number, logger: Logger, matrixName: 
     const B_k1 = subMat(Ainv, beta_vAinv);
 
     logger.text(`- Tính các khối con của $${matrixName}_${k}^{-1}$:`);
-    logger.formula(`$$b_{${k}${k}} = \\frac{1}{m_${k}} = ${fmtNum(b_kk, decimals)}$$`);
-    logger.formula(`$$\\beta_{${k-1},1} = -b_{${k}${k}} ${matrixName}_{${k-1}}^{-1} \\alpha_{${k-1},1} = \\begin{bmatrix} ${fmtVec(beta_col, decimals)} \\end{bmatrix}^T$$`);
-    logger.formula(`$$\\beta_{1,${k-1}} = -b_{${k}${k}} \\alpha_{1,${k-1}} ${matrixName}_{${k-1}}^{-1} = \\begin{bmatrix} ${fmtVec(beta_row, decimals)} \\end{bmatrix}$$`);
-    logger.formula(`$$B_{${k-1}} = ${matrixName}_{${k-1}}^{-1} - \\beta_{${k-1},1} \\alpha_{1,${k-1}} ${matrixName}_{${k-1}}^{-1} = ${fmtMat(B_k1, decimals)}$$`);
+    logger.formula(`$$b_{${k}${k}} = \\frac{1}{m_${k}} = ${fmtNum(b_kk, generalDecimals)}$$`);
+    logger.formula(`$$\\beta_{${k-1},1} = -b_{${k}${k}} ${matrixName}_{${k-1}}^{-1} \\alpha_{${k-1},1} = \\begin{bmatrix} ${fmtVec(beta_col, generalDecimals)} \\end{bmatrix}^T$$`);
+    logger.formula(`$$\\beta_{1,${k-1}} = -b_{${k}${k}} \\alpha_{1,${k-1}} ${matrixName}_{${k-1}}^{-1} = \\begin{bmatrix} ${fmtVec(beta_row, generalDecimals)} \\end{bmatrix}$$`);
+    logger.formula(`$$B_{${k-1}} = ${matrixName}_{${k-1}}^{-1} - \\beta_{${k-1},1} \\alpha_{1,${k-1}} ${matrixName}_{${k-1}}^{-1} = ${fmtMat(B_k1, matrixDecimals)}$$`);
 
     // Assemble A_k^{-1}
     const nextAinv: Mat = Array.from({ length: k }, () => new Array(k).fill(0));
@@ -159,7 +146,7 @@ function borderingInverse(A: Mat, decimals: number, logger: Logger, matrixName: 
     Ainv = nextAinv;
     
     logger.text(`- Ghép thành ma trận nghịch đảo cấp ${k}:`);
-    logger.formula(`$$${matrixName}_${k}^{-1} = ${fmtMat(Ainv, decimals)}$$`);
+    logger.formula(`$$${matrixName}_${k}^{-1} = ${fmtMat(Ainv, matrixDecimals)}$$`);
   }
 
   return Ainv;
@@ -181,14 +168,13 @@ export function runVienQuanh(params: Record<string, string>, logger: Logger): vo
     return;
   }
 
-  // Fallback decimals
-  const decimals = 5;
+  const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon();
 
   logger.section("THÔNG TIN ĐẦU VÀO");
-  logger.formula(`$$A = ${fmtMat(A, decimals)}$$`);
+  logger.formula(`$$A = ${fmtMat(A, matrixDecimals)}$$`);
   
   logger.section("THUẬT TOÁN VIỀN QUANH (TRỰC TIẾP)");
-  let Ainv = borderingInverse(A, decimals, logger, "A");
+  let Ainv = borderingInverse(A, matrixDecimals, generalDecimals, logger, "A");
 
   if (Ainv === null) {
     logger.section("XỬ LÝ NGOẠI LỆ ($A^TA$)");
@@ -197,10 +183,10 @@ export function runVienQuanh(params: Record<string, string>, logger: Logger): vo
     const At = transpose(A);
     const M = matMul(At, A);
     logger.step("**Bước 1: Tính ma trận đối xứng M = A^T A**");
-    logger.formula(`$$M = A^T A = ${fmtMat(M, decimals)}$$`);
+    logger.formula(`$$M = A^T A = ${fmtMat(M, matrixDecimals)}$$`);
     
     logger.step("**Bước 2: Chạy viền quanh trên M**");
-    const Minv = borderingInverse(M, decimals, logger, "M");
+    const Minv = borderingInverse(M, matrixDecimals, generalDecimals, logger, "M");
     
     if (Minv === null) {
       logger.error("Ma trận M cũng bị suy biến hoặc lỗi số trị. Không thể tìm nghịch đảo.");
@@ -209,9 +195,9 @@ export function runVienQuanh(params: Record<string, string>, logger: Logger): vo
     
     logger.step("**Bước 3: Tính kết quả A^{-1} = M^{-1} A^T**");
     Ainv = matMul(Minv, At);
-    logger.formula(`$$A^{-1} = M^{-1} A^T = ${fmtMat(Ainv, decimals)}$$`);
+    logger.formula(`$$A^{-1} = M^{-1} A^T = ${fmtMat(Ainv, matrixDecimals)}$$`);
   } else {
     logger.section("KẾT QUẢ CUỐI CÙNG");
-    logger.formula(`$$A^{-1} = ${fmtMat(Ainv, decimals)}$$`);
+    logger.formula(`$$A^{-1} = ${fmtMat(Ainv, matrixDecimals)}$$`);
   }
 }

@@ -6,9 +6,11 @@ type NumMatrix = number[][];
 export type CaseType = "TH1" | "TH2" | "TH3";
 
 let currentDecimals = 5;
+let currentMatrixDecimals = 4;
 
-export function setFormattingDecimals(d: number) {
-  currentDecimals = d;
+export function setFormattingDecimals(g: number, m: number) {
+  currentDecimals = g;
+  currentMatrixDecimals = m;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +88,7 @@ function parseVector(text: string): number[] {
 
 export function fmt(v: number, d = currentDecimals): string {
   if (!Number.isFinite(v)) return String(v);
-  if (Math.abs(v) < 1e-15) return "0";
+  if (Math.abs(v) < 1e-10) return (0).toFixed(d);
   return v.toFixed(d);
 }
 
@@ -94,11 +96,11 @@ export function formatVec(vec: number[]): string {
   return `[${vec.map(fmt).join(", ")}]`;
 }
 
-export function formatMatrixForLog(m: NumMatrix): Record<string, string>[] {
+export function formatMatrixForLog(m: NumMatrix, d = currentMatrixDecimals): Record<string, string>[] {
   const cols = m[0]?.length ?? 0;
   return m.map((row, i) => {
     const obj: Record<string, string> = { hàng: String(i + 1) };
-    for (let j = 0; j < cols; j++) obj[`c${j + 1}`] = fmt(row[j]);
+    for (let j = 0; j < cols; j++) obj[`c${j + 1}`] = fmt(row[j], d);
     return obj;
   });
 }
@@ -396,10 +398,10 @@ export function runPowerEigen(
       logger.error("ε phải là số dương.");
       return;
     }
-    const { tableDecimals } = getPrecisionByEpsilon(eps);
-    setFormattingDecimals(tableDecimals);
+    const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon(eps);
+    setFormattingDecimals(generalDecimals, matrixDecimals);
   } else {
-    setFormattingDecimals(5);
+    setFormattingDecimals(5, 4);
   }
 
   if (isNaN(maxIter) || maxIter <= 0) {

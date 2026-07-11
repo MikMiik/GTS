@@ -108,6 +108,7 @@ function FormFields({
     case "xuong-thang":
       return <XuongThangFields onKeyDown={onKeyDown} />;
     case "svd-power":
+    case "condition-number-power":
       return <SvdPowerFields onKeyDown={onKeyDown} />;
     case "svd":
     case "pseudoinverse":
@@ -1306,7 +1307,7 @@ function SvdPowerFields({ onKeyDown }: FieldProps) {
       <div className="matrix-help">
         📋 Nhập ma trận A, véc-tơ khởi tạo x₀ (số chiều bằng số cột của A).
       </div>
-      <div className="form-section-title">Đầu vào SVD (Lũy thừa)</div>
+      <div className="form-section-title">Thông số Lũy thừa</div>
       <div className="form-group">
         <label className="form-label" htmlFor="in-matA">
           Ma trận A (m × n)

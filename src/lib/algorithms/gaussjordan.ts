@@ -1,5 +1,7 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { parseFraction, getPrecisionByEpsilon, fmtNum } from "./math-utils";
+
+const { generalDecimals, matrixDecimals } = getPrecisionByEpsilon(undefined);
 
 export function runGaussJordan(params: Record<string, string>, logger: Logger): void {
   const { matA, matB } = params;
@@ -38,7 +40,7 @@ type Expr={const:number;terms:Record<string,number>};
 
 function fmtM(M:number[][],n:number):Record<string,string>[]{
   return M.map(row=>{ const obj:Record<string,string>={};
-    row.forEach((val,c)=>{ const name=c<n?`x${c+1}`:`b${c-n+1}`; obj[name]=Math.abs(val)<1e-10?"0.0000":val.toFixed(4); });
+    row.forEach((val,c)=>{ const name=c<n?`x${c+1}`:`b${c-n+1}`; obj[name]=Math.abs(val)<1e-10?"0":fmtNum(val, matrixDecimals); });
     return obj;
   });
 }
@@ -48,10 +50,10 @@ function fmtExpr({const:c,terms}:Expr):string{
   const hasC=Math.abs(c)>1e-10;
   if(!hasC&&entries.length===0) return "0";
   const parts:string[]=[];
-  if(hasC) parts.push(c.toFixed(4));
+  if(hasC) parts.push(fmtNum(c, generalDecimals));
   for(const [t,coeff] of entries){
-    if(parts.length===0){ if(Math.abs(coeff-1)<1e-10) parts.push(t); else if(Math.abs(coeff+1)<1e-10) parts.push(`-${t}`); else parts.push(`${coeff.toFixed(4)}*${t}`); }
-    else{ const sign=coeff>=0?"+":"-"; const abs=Math.abs(coeff); if(Math.abs(abs-1)<1e-10) parts.push(`${sign} ${t}`); else parts.push(`${sign} ${abs.toFixed(4)}*${t}`); }
+    if(parts.length===0){ if(Math.abs(coeff-1)<1e-10) parts.push(t); else if(Math.abs(coeff+1)<1e-10) parts.push(`-${t}`); else parts.push(`${fmtNum(coeff, generalDecimals)}*${t}`); }
+    else{ const sign=coeff>=0?"+":"-"; const abs=Math.abs(coeff); if(Math.abs(abs-1)<1e-10) parts.push(`${sign} ${t}`); else parts.push(`${sign} ${fmtNum(abs, generalDecimals)}*${t}`); }
   }
   return parts.join(" ");
 }
@@ -86,13 +88,13 @@ function solveGaussJordan(A:number[][],B:number[][],logger:Logger){
     const {row:pr,col:pc}=best, pivotVal=M[pr][pc];
     const tierLabels=["[số thập phân — lớn nhất]","[số nguyên — lớn nhất]","[±1 — tối ưu]"];
     logger.step(`[Bước ${step}] Chọn pivot:`);
-    logger.formula(`$$a_{${pr+1},${pc+1}} = ${pivotVal.toFixed(4)} \\quad \\text{${tierLabels[best.tier]}}$$`);
+    logger.formula(`$$a_{${pr+1},${pc+1}} = ${fmtNum(pivotVal, generalDecimals)} \\quad \\text{${tierLabels[best.tier]}}$$`);
     const ops:string[]=[]; let changed=false;
     for(let k=0;k<m;k++){
       if(k===pr) continue;
       if(Math.abs(M[k][pc])<1e-10) continue;
       const factor=M[k][pc]/pivotVal;
-      ops.push(`L_{${k+1}} = L_{${k+1}} - (${factor.toFixed(4)}) L_{${pr+1}}`);
+      ops.push(`L_{${k+1}} = L_{${k+1}} - (${fmtNum(factor, generalDecimals)}) L_{${pr+1}}`);
       for(let col=0;col<n+p;col++) M[k][col]-=factor*M[pr][col];
       M[k][pc]=0; changed=true;
     }
@@ -103,7 +105,7 @@ function solveGaussJordan(A:number[][],B:number[][],logger:Logger){
   logger.section("CHUẨN HÓA ĐƯỜNG CHÉO (CHIA PIVOT = 1)");
   for(let r=0;r<m;r++){
     if(usedRows.has(r)) continue;
-    for(let k=0;k<p;k++) if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho $$0 = ${M[r][n+k].toFixed(4)}$$`); return null; }
+    for(let k=0;k<p;k++) if(Math.abs(M[r][n+k])>1e-10){ logger.error(`VÔ NGHIỆM: Hàng ${r+1} cho $$0 = ${fmtNum(M[r][n+k], generalDecimals)}$$`); return null; }
   }
   const freeCols:number[]=[];
   for(let c=0;c<n;c++) if(!usedCols.has(c)) freeCols.push(c);

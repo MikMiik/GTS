@@ -1,19 +1,11 @@
 import type { Logger } from "@/types/solver";
-import { parseFraction } from "./math-utils";
+import { getPrecisionByEpsilon, parseFraction, fmtNum as fmt, fmtVec, fmtMat } from "./math-utils";
 
 type Mat = number[][];
 
 
 
-function fmt(v: number, d: number) {
-  if (!Number.isFinite(v)) return String(v);
-  if (Math.abs(v) < 1e-15) return "0";
-  return v.toFixed(d);
-}
 
-function fmtVec(v: number[], d: number) {
-  return `[${v.map((vi) => fmt(vi, d)).join(", ")}]`;
-}
 
 function parseMatrix(text: string): Mat {
   return text.trim().split(/\r?\n/).filter((l) => l.trim()).map((line) =>
@@ -33,10 +25,7 @@ function parseVector(text: string): number[] {
   });
 }
 
-function fmtMatTex(M: Mat, d: number = 4): string {
-  const rows = M.map((r) => r.map((x) => fmt(x, d)).join(" & "));
-  return `\\begin{bmatrix} ${rows.join(" \\\\ ")} \\end{bmatrix}`;
-}
+
 
 export function runJacobiMatrix(params: Record<string, string>, logger: Logger): void {
   const { matA, vecB, epsilon, maxIterStr } = params;
@@ -74,6 +63,10 @@ export function runJacobiMatrix(params: Record<string, string>, logger: Logger):
     }
   }
 
+  const prec = getPrecisionByEpsilon(hasEpsilon ? eps : undefined);
+  const generalDecimals = prec.generalDecimals;
+  const matrixDecimals = prec.matrixDecimals;
+
   const maxIter = parseInt(maxIterStr, 10) || 100;
 
   logger.section("Phương pháp Lặp Jacobi ma trận");
@@ -108,8 +101,8 @@ export function runJacobiMatrix(params: Record<string, string>, logger: Logger):
     if (sumCol > q_cot) q_cot = sumCol;
   }
 
-  logger.text(`- Hệ số co theo hàng (chuẩn vô cùng của ma trận lặp): $q_{hang} = \\max_i \\sum_{j \\neq i} \\frac{|a_{ij}|}{|a_{ii}|} = ${fmt(q_hang, 7)}$`);
-  logger.text(`- Hệ số co theo cột (chuẩn 1 của ma trận lặp): $q_{cot} = \\max_j \\sum_{i \\neq j} \\frac{|a_{ij}|}{|a_{ii}|} = ${fmt(q_cot, 7)}$`);
+  logger.text(`- Hệ số co theo hàng (chuẩn vô cùng của ma trận lặp): $q_{hang} = \\max_i \\sum_{j \\neq i} \\frac{|a_{ij}|}{|a_{ii}|} = ${fmt(q_hang, generalDecimals)}$`);
+  logger.text(`- Hệ số co theo cột (chuẩn 1 của ma trận lặp): $q_{cot} = \\max_j \\sum_{i \\neq j} \\frac{|a_{ij}|}{|a_{ii}|} = ${fmt(q_cot, generalDecimals)}$`);
 
   const validCases: { type: string; title: string; q: number; p: number; lambda: number; normName: string }[] = [];
   if (q_hang < 1) {
@@ -147,11 +140,11 @@ export function runJacobiMatrix(params: Record<string, string>, logger: Logger):
   const M_J: Mat = Array.from({ length: m }, (_, i) =>
     Array.from({ length: m }, (_, j) => (i === j ? 0 : -A[i][j] / A[i][i]))
   );
-  logger.formula(`$$M_J = ${fmtMatTex(M_J, 5)}$$`);
+  logger.formula(`$$M_J = ${fmtMat(M_J, matrixDecimals)}$$`);
 
   logger.text("- Lập véc-tơ Jacobi $d$: $d_i = \\frac{b_i}{a_{ii}}$.");
   const d_vec = Array.from({ length: m }, (_, i) => B[i] / A[i][i]);
-  logger.formula(`$$d = \\begin{bmatrix} ${d_vec.map(x => fmt(x, 7)).join(" \\\\ ")} \\end{bmatrix}$$`);
+  logger.formula(`$$d = \\begin{bmatrix} ${d_vec.map(x => fmt(x, generalDecimals)).join(" \\\\ ")} \\end{bmatrix}$$`);
 
   for (let idx = 0; idx < validCases.length; idx++) {
     const caseCfg = validCases[idx];
@@ -163,10 +156,10 @@ export function runJacobiMatrix(params: Record<string, string>, logger: Logger):
     }
 
     if (caseCfg.type === "hang") {
-      logger.text(`  - Chọn $q = q_{hang} = ${fmt(caseCfg.q, 7)}$, sử dụng chuẩn $p = \\infty$, và $\\lambda = 1$.`);
+      logger.text(`  - Chọn $q = q_{hang} = ${fmt(caseCfg.q, generalDecimals)}$, sử dụng chuẩn $p = \\infty$, và $\\lambda = 1$.`);
     } else {
-      logger.text(`  - Chọn $q = q_{cot} = ${fmt(caseCfg.q, 7)}$, sử dụng chuẩn $p = 1$.`);
-      logger.text(`  - Tính $\\lambda = \\frac{\\max |a_{ii}|}{\\min |a_{ii}|} = \\frac{${fmt(maxAii, 7)}}{${fmt(minAii, 7)}} = ${fmt(caseCfg.lambda, 7)}$.`);
+      logger.text(`  - Chọn $q = q_{cot} = ${fmt(caseCfg.q, generalDecimals)}$, sử dụng chuẩn $p = 1$.`);
+      logger.text(`  - Tính $\\lambda = \\frac{\\max |a_{ii}|}{\\min |a_{ii}|} = \\frac{${fmt(maxAii, generalDecimals)}}{${fmt(minAii, generalDecimals)}} = ${fmt(caseCfg.lambda, generalDecimals)}$.`);
     }
 
     logger.step("**Bước 3: Khởi tạo và tính dãy lặp**");
@@ -181,7 +174,7 @@ export function runJacobiMatrix(params: Record<string, string>, logger: Logger):
       logger.text(`- Lặp đúng ${maxIter} lần theo yêu cầu.`);
     }
 
-    const tableData: Record<string, unknown>[] = [{ n: 0, "X^(n)": fmtVec(d_vec, 7), "Δ_n": "—" }];
+    const tableData: Record<string, unknown>[] = [{ n: 0, "X^(n)": fmtVec(d_vec, generalDecimals), "Δ_n": "—" }];
 
     let X_curr = [...d_vec];
     let step = 0;
@@ -204,7 +197,7 @@ export function runJacobiMatrix(params: Record<string, string>, logger: Logger):
         maxDiff = X_next.reduce((acc, x, i) => acc + Math.abs(x - X_curr[i]), 0);
       }
 
-      tableData.push({ n: step, "X^(n)": fmtVec(X_next, 7), "Δ_n": fmt(maxDiff, 7) });
+      tableData.push({ n: step, "X^(n)": fmtVec(X_next, generalDecimals), "Δ_n": fmt(maxDiff, generalDecimals) });
       X_curr = [...X_next];
 
       if (hasEpsilon && maxDiff <= eps0) break;
@@ -217,10 +210,10 @@ export function runJacobiMatrix(params: Record<string, string>, logger: Logger):
 
     logger.step("**Bước 4: Ước lượng sai số**");
     logger.formula(`$$\\|X^{(${step})} - X^*\\|_{${caseCfg.normName}} \\le \\lambda \\frac{q}{1-q} \\|X^{(${step})} - X^{(${step-1})}\\|_{${caseCfg.normName}}$$`);
-    logger.formula(`$$= ${fmt(caseCfg.lambda, 5)} \\times \\frac{${fmt(caseCfg.q, 7)}}{1 - ${fmt(caseCfg.q, 7)}} \\times ${fmt(maxDiff, 7)} \\approx ${estimatedError.toExponential(7)}$$`);
+    logger.formula(`$$= ${fmt(caseCfg.lambda, generalDecimals)} \\times \\frac{${fmt(caseCfg.q, generalDecimals)}}{1 - ${fmt(caseCfg.q, generalDecimals)}} \\times ${fmt(maxDiff, generalDecimals)} \\approx ${estimatedError.toExponential(7)}$$`);
 
     logger.separator();
     logger.text(`**Kết quả cuối cùng nghiệm $X^{(${step})}$ sau ${step} lần lặp:**`);
-    logger.formula(`$$X^{(${step})} = \\begin{bmatrix} ${X_curr.map(x => fmt(x, 7)).join(" \\\\ ")} \\end{bmatrix}$$`);
+    logger.formula(`$$X^{(${step})} = \\begin{bmatrix} ${X_curr.map(x => fmt(x, generalDecimals)).join(" \\\\ ")} \\end{bmatrix}$$`);
   }
 }

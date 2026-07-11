@@ -1,5 +1,5 @@
 import { create, all } from "mathjs";
-import { parseFraction } from "./math-utils";
+import { parseFraction, fmtNum, fmtVec, fmtMat } from "./math-utils";
 import type { Logger } from "@/types/solver";
 
 const math = create(all);
@@ -111,20 +111,7 @@ function completeBasis(existing: number[][], dim: number, logger: Logger, symbol
   return result;
 }
 
-function fmtNum(v: number, decimals = 6): string {
-  if (Math.abs(v) < 1e-10) return "0";
-  const r = parseFloat(v.toFixed(decimals));
-  return String(r);
-}
 
-function fmtVec(v: number[]): string {
-  return v.map((x) => fmtNum(x)).join(" & ");
-}
-
-function fmtMat(M: Mat): string {
-  const rows = M.map((r) => r.map((x) => fmtNum(x)).join(" & "));
-  return `\\begin{bmatrix} ${rows.join(" \\\\ ")} \\end{bmatrix}`;
-}
 
 // ─── Core SVD computation ─────────────────────────────────────────────────────
 

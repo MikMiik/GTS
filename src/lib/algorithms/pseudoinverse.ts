@@ -1,5 +1,5 @@
 import { create, all } from "mathjs";
-import { parseFraction } from "./math-utils";
+import { parseFraction, fmtNum, fmtVec, fmtMat } from "./math-utils";
 import type { Logger } from "@/types/solver";
 
 const math = create(all);
@@ -111,19 +111,7 @@ function nullSpaceBasis(M: Mat, tol = 1e-10): number[][] {
   });
 }
 
-function fmtNum(v: number): string {
-  if (Math.abs(v) < 1e-10) return "0";
-  return String(parseFloat(v.toFixed(6)));
-}
 
-function fmtVec(v: number[]): string {
-  return v.map((x) => fmtNum(x)).join(" & ");
-}
-
-function fmtMat(M: Mat): string {
-  const rows = M.map((r) => r.map((x) => fmtNum(x)).join(" & "));
-  return `\\begin{bmatrix} ${rows.join(" \\\\ ")} \\end{bmatrix}`;
-}
 
 // ─── Run function ─────────────────────────────────────────────────────────────
 
