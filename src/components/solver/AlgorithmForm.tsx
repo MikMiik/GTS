@@ -73,6 +73,8 @@ function FormFields({
   onKeyDown,
 }: FieldProps & { method: AlgorithmKey }) {
   switch (method) {
+    case "isolate-roots":
+      return <PolynomialFields onKeyDown={onKeyDown} />;
     case "bisection":
       return <BisectionFields onKeyDown={onKeyDown} />;
     case "tieptuyen":
@@ -108,7 +110,6 @@ function FormFields({
     case "xuong-thang":
       return <XuongThangFields onKeyDown={onKeyDown} />;
     case "svd-power":
-    case "condition-number-power":
       return <SvdPowerFields onKeyDown={onKeyDown} />;
     case "svd":
     case "pseudoinverse":
@@ -1427,6 +1428,41 @@ function GramSchmidtFields() {
           rows={5}
           spellCheck={false}
         />
+      </div>
+    </>
+  );
+}
+
+function PolynomialFields({ onKeyDown }: FieldProps) {
+  return (
+    <>
+      <div className="matrix-help">
+        📋 Nhập mảng các hệ số của đa thức (từ bậc cao nhất đến bậc thấp nhất).
+        <br />
+        <strong>Lưu ý:</strong> Chúng tôi yêu cầu bạn nhập trực tiếp hệ số (thay vì nhập hàm số dạng chuỗi như <code>x^3 - x - 2</code>) nhằm đảm bảo thuật toán phân tích đa thức, chia đa thức dư và thiết lập dãy Sturm hoạt động hoàn toàn chính xác và ổn định.
+        <br />
+        <br />
+        Ví dụ đối với đa thức $x^3 - x - 2$, hãy nhập:
+        <br />
+        <code>1 0 -1 -2</code>
+      </div>
+      <div className="form-section-title">Hệ số Đa thức</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="in-coeffs">
+          Mảng hệ số (cách nhau bởi khoảng trắng hoặc dấu phẩy)
+        </label>
+        <input
+          className="form-input"
+          id="in-coeffs"
+          name="coeffs"
+          type="text"
+          spellCheck={false}
+          autoComplete="off"
+          onKeyDown={onKeyDown}
+        />
+        <div className="form-hint">
+          Hệ số bậc cao nhất phải khác 0. Cần bao gồm cả số 0 nếu khuyết bậc.
+        </div>
       </div>
     </>
   );
